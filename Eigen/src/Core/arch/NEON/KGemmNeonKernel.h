@@ -2289,4 +2289,508 @@ static inline float *kgemm_pa_pad_scratch(size_t count)
     return get_scratch(&scratch, count);
 }
 
+#if defined(__GNUC__) && !defined(__clang__)
+#define KP_GEMM_COPY_NO_LIB __attribute__((noinline, optimize("no-tree-loop-distribute-patterns")))
+#else
+#define KP_GEMM_COPY_NO_LIB __attribute__((noinline))
+#endif
+static KP_GEMM_COPY_NO_LIB void kgemm_copy_f32_no_overlap(float *dst, const float *src, long int count)
+{
+    const long int vec_cnt = count & ~3L;
+    const long int tail_cnt = count & 3L;
+    long int i = 0;
+    for (; i < vec_cnt; i += 4) {
+        const float32x4_t v = vld1q_f32(src + i);
+        vst1q_f32(dst + i, v);
+    }
+    if (tail_cnt & 2L) {
+        vst1_f32(dst + vec_cnt, vld1_f32(src + vec_cnt));
+    }
+    if (tail_cnt & 1L) {
+        const long int tail_idx = vec_cnt + (tail_cnt & 2L);
+        dst[tail_idx] = src[tail_idx];
+    }
+}
+#undef KP_GEMM_COPY_NO_LIB
+
+static inline void kgemm_copy_16_f32_no_overlap(float *dst, const float *src)
+{
+    const float32x4_t v0 = vld1q_f32(src + 0);
+    const float32x4_t v1 = vld1q_f32(src + 4);
+    const float32x4_t v2 = vld1q_f32(src + 8);
+    const float32x4_t v3 = vld1q_f32(src + 12);
+    vst1q_f32(dst + 0, v0);
+    vst1q_f32(dst + 4, v1);
+    vst1q_f32(dst + 8, v2);
+    vst1q_f32(dst + 12, v3);
+}
+
+static inline void micro_kernel_8x1_nn_pad(float *a, float *b, float *c,
+    long int lda, long int ldb, long int ldc, long int k, long int c_state, long int valid_m)
+{
+    float *apad = (float *)__builtin_assume_aligned(
+        kgemm_pa_pad_scratch((size_t)8 * 512), 64);
+    float cpad[8] __attribute__((aligned(32)));
+    long int pad_lda = align_up(k, 16);
+
+    for (long int i = 0; i < valid_m; ++i) {
+        kgemm_copy_f32_no_overlap(&apad[i * pad_lda], &a[i * lda], k);
+    }
+    if (c_state) {
+        if (ldc == 1) {
+            kgemm_copy_f32_no_overlap(cpad, c, valid_m);
+        } else {
+            for (long int i = 0; i < valid_m; ++i) {
+                cpad[i] = c[i * ldc];
+            }
+        }
+    }
+
+    micro_kernel_8x1_nn(apad, b, cpad, pad_lda, ldb, 1, k, c_state);
+    if (ldc == 1) {
+        kgemm_copy_f32_no_overlap(c, cpad, valid_m);
+    } else {
+        for (long int i = 0; i < valid_m; ++i) {
+            c[i * ldc] = cpad[i];
+        }
+    }
+}
+
+static inline void micro_kernel_8x1_nn_stride_pad(float *a, float *b, float *c,
+    long int lda, long int ldb, long int ldc, long int k, long int c_state, long int valid_m)
+{
+    float *apad = (float *)__builtin_assume_aligned(
+        kgemm_pa_pad_scratch((size_t)8 * 512), 64);
+    float cpad[8] __attribute__((aligned(32)));
+    long int pad_lda = align_up(k, 16);
+
+    for (long int i = 0; i < valid_m; ++i) {
+        kgemm_copy_f32_no_overlap(&apad[i * pad_lda], &a[i * lda], k);
+    }
+    if (c_state) {
+        if (ldc == 1) {
+            kgemm_copy_f32_no_overlap(cpad, c, valid_m);
+        } else {
+            for (long int i = 0; i < valid_m; ++i) {
+                cpad[i] = c[i * ldc];
+            }
+        }
+    }
+
+    micro_kernel_8x1_nn_stride(apad, b, cpad, pad_lda, ldb, 1, k, c_state);
+    if (ldc == 1) {
+        kgemm_copy_f32_no_overlap(c, cpad, valid_m);
+    } else {
+        for (long int i = 0; i < valid_m; ++i) {
+            c[i * ldc] = cpad[i];
+        }
+    }
+}
+
+static inline void micro_kernel_8x8_nn_pad(float *a, float *b, float *c,
+    long int lda, long int ldb, long int ldc, long int k, long int c_state, long int valid_m)
+{
+    float *apad = (float *)__builtin_assume_aligned(
+        kgemm_pa_pad_scratch((size_t)8 * 512), 64);
+    float cpad[8 * 8] __attribute__((aligned(32)));
+    long int pad_lda = align_up(k, 16);
+
+    for (long int i = 0; i < valid_m; ++i) {
+        kgemm_copy_f32_no_overlap(&apad[i * pad_lda], &a[i * lda], k);
+    }
+    if (c_state) {
+        for (long int i = 0; i < valid_m; ++i) {
+            kgemm_copy_f32_no_overlap(&cpad[i * 8], &c[i * ldc], 8);
+        }
+    }
+
+    micro_kernel_8x8_nn(apad, b, cpad, pad_lda, ldb, 8, k, c_state);
+
+    for (long int i = 0; i < valid_m; ++i) {
+        kgemm_copy_f32_no_overlap(&c[i * ldc], &cpad[i * 8], 8);
+    }
+}
+
+static inline void micro_kernel_4x4_nn_pad(float *a, float *b, float *c,
+    long int lda, long int ldb, long int ldc, long int k, long int c_state, long int valid_m)
+{
+    float *apad = (float *)__builtin_assume_aligned(
+        kgemm_pa_pad_scratch((size_t)8 * 512), 64);
+    float cpad[4 * 4] __attribute__((aligned(32)));
+    long int pad_lda = align_up(k, 16);
+
+    for (long int i = 0; i < valid_m; ++i) {
+        kgemm_copy_f32_no_overlap(&apad[i * pad_lda], &a[i * lda], k);
+    }
+    if (c_state) {
+        for (long int i = 0; i < valid_m; ++i) {
+            kgemm_copy_f32_no_overlap(&cpad[i * 4], &c[i * ldc], 4);
+        }
+    }
+
+    micro_kernel_4x4_nn(apad, b, cpad, pad_lda, ldb, 4, k, c_state);
+
+    for (long int i = 0; i < valid_m; ++i) {
+        kgemm_copy_f32_no_overlap(&c[i * ldc], &cpad[i * 4], 4);
+    }
+}
+
+static inline void micro_kernel_8x2_nn_pad(float *a, float *b, float *c,
+    long int lda, long int ldb, long int ldc, long int k, long int c_state, long int valid_m)
+{
+    float *apad = (float *)__builtin_assume_aligned(
+        kgemm_pa_pad_scratch((size_t)8 * 512), 64);
+    float cpad[8 * 2] __attribute__((aligned(32)));
+    long int pad_lda = align_up(k, 16);
+
+    for (long int i = 0; i < valid_m; ++i) {
+        kgemm_copy_f32_no_overlap(&apad[i * pad_lda], &a[i * lda], k);
+    }
+    if (c_state) {
+        for (long int i = 0; i < valid_m; ++i) {
+            kgemm_copy_f32_no_overlap(&cpad[i * 2], &c[i * ldc], 2);
+        }
+    }
+
+    micro_kernel_8x2_nn(apad, b, cpad, pad_lda, ldb, 2, k, c_state);
+
+    for (long int i = 0; i < valid_m; ++i) {
+        kgemm_copy_f32_no_overlap(&c[i * ldc], &cpad[i * 2], 2);
+    }
+} 
+
+static inline void kgemm_pack_b_16(float *pb, const float *b, long int ldb, long int k)
+{
+    for (long int kk = 0; kk < k; ++kk) {
+        kgemm_copy_16_f32_no_overlap(pb + kk * 16, b + kk * ldb);
+    }
+}
+
+static inline void kgemm_pack_b_kmajor16(float *pb, const float *b,
+    long int ldb, long int n, long int k)
+{
+    for (long int nbase = 0; nbase < n; nbase += 16) {
+        const long int ncur = nbase + 16 <= n ? 16 : n - nbase;
+        float *panel = pb + (nbase / 16) * k * 16;
+        for (long int kk = 0; kk < k; ++kk) {
+            float *dst = panel + kk * 16;
+            const float *src = b + kk * ldb + nbase;
+            if (ncur == 16) {
+                kgemm_copy_16_f32_no_overlap(dst, src);
+            } else {
+                long int lane = 0;
+                for (; lane < ncur; ++lane) dst[lane] = src[lane];
+                for (; lane < 16; ++lane) dst[lane] = 0.0f;
+            }
+        }
+    }
+}
+
+static inline void kgemm_pack_a_kmajor4(float *pa, const float *a, long int lda, long int m, long int k)
+{
+    for (long int mbase = 0; mbase < m; mbase += MICRO_M) {
+        float *panel = pa + (mbase / MICRO_M) * k * MICRO_M;
+        if (mbase + MICRO_M <= m) {
+            const float *a0 = a + mbase * lda;
+            const float *a1 = a0 + lda;
+            const float *a2 = a1 + lda;
+            const float *a3 = a2 + lda;
+            long int kk = 0;
+            const long int peeled_k = k & ~(long)(MICRO_M - 1);
+            for (; kk < peeled_k; kk += MICRO_M) {
+                float32x4_t r0 = vld1q_f32(a0 + kk);
+                float32x4_t r1 = vld1q_f32(a1 + kk);
+                float32x4_t r2 = vld1q_f32(a2 + kk);
+                float32x4_t r3 = vld1q_f32(a3 + kk);
+                float32x4x2_t t01 = vtrnq_f32(r0, r1);
+                float32x4x2_t t23 = vtrnq_f32(r2, r3);
+                float32x4_t c0 = vcombine_f32(vget_low_f32(t01.val[0]), vget_low_f32(t23.val[0]));
+                float32x4_t c1 = vcombine_f32(vget_low_f32(t01.val[1]), vget_low_f32(t23.val[1]));
+                float32x4_t c2 = vcombine_f32(vget_high_f32(t01.val[0]), vget_high_f32(t23.val[0]));
+                float32x4_t c3 = vcombine_f32(vget_high_f32(t01.val[1]), vget_high_f32(t23.val[1]));
+                float *dst = panel + kk * MICRO_M;
+                vst1q_f32(dst + 0, c0);
+                vst1q_f32(dst + 4, c1);
+                vst1q_f32(dst + 8, c2);
+                vst1q_f32(dst + 12, c3);
+            }
+            for (; kk < k; ++kk) {
+                float *dst = panel + kk * MICRO_M;
+                dst[0] = a0[kk];
+                dst[1] = a1[kk];
+                dst[2] = a2[kk];
+                dst[3] = a3[kk];
+            }
+        } else {
+            for (long int kk = 0; kk < k; ++kk) {
+                float *dst = panel + kk * MICRO_M;
+                for (long int lane = 0; lane < MICRO_M; ++lane) {
+                    const long int row = mbase + lane;
+                    dst[lane] = row < m ? a[row * lda + kk] : 0.0f;
+                }
+            }
+        }
+    }
+}
+
+static inline void kgemm_tail_n(float *a, float *b, float *c,
+    long int lda, long int ldb, long int ldc,
+    long int m_blk_idx, long int mcur, long int kidx, long int kcur,
+    long int c_state, long int nn, long int off, long int n)
+{
+    if (nn >= 8) {
+        long int midx = 0;
+        long int msub = 0;
+        for (; msub + 8 <= mcur; msub += 8) {
+            midx = m_blk_idx + msub;
+            micro_kernel_8x8_nn(&a[midx * lda + kidx], &b[kidx * ldb + off], &c[midx * ldc + off],
+                lda, ldb, ldc, kcur, c_state);
+        }
+        if (msub < mcur) {
+            midx = m_blk_idx + msub;
+            micro_kernel_8x8_nn_pad(&a[midx * lda + kidx], &b[kidx * ldb + off], &c[midx * ldc + off],
+                lda, ldb, ldc, kcur, c_state, mcur - msub);
+        }
+        nn -= 8;
+        off += 8;
+    }
+    if (nn >= 4) {
+        long int midx = 0;
+        long int msub = 0;
+        for (; msub + 4 <= mcur; msub += 4) {
+            midx = m_blk_idx + msub;
+            micro_kernel_4x4_nn(&a[midx * lda + kidx], &b[kidx * ldb + off], &c[midx * ldc + off],
+                lda, ldb, ldc, kcur, c_state);
+        }
+        if (msub < mcur) {
+            midx = m_blk_idx + msub;
+            micro_kernel_4x4_nn_pad(&a[midx * lda + kidx], &b[kidx * ldb + off], &c[midx * ldc + off],
+                lda, ldb, ldc, kcur, c_state, mcur - msub);
+        }
+        nn -= 4;
+        off += 4;
+    }
+    if (nn >= 2) {
+        long int midx = 0;
+        long int msub = 0;
+        for (; msub + 8 <= mcur; msub += 8) {
+            midx = m_blk_idx + msub;
+            micro_kernel_8x2_nn(&a[midx * lda + kidx], &b[kidx * ldb + off], &c[midx * ldc + off],
+                lda, ldb, ldc, kcur, c_state);
+        }
+        if (msub < mcur) {
+            midx = m_blk_idx + msub;
+            micro_kernel_8x2_nn_pad(&a[midx * lda + kidx], &b[kidx * ldb + off], &c[midx * ldc + off],
+                lda, ldb, ldc, kcur, c_state, mcur - msub);
+        }
+        nn -= 2;
+        off += 2;
+    }
+    if (nn >= 1) {
+        long int midx = 0;
+        long int msub = 0;
+        if (n == 1 && ldb == 1) {
+            float *pbn1 = &b[kidx * ldb + off];
+            for (; msub + 8 <= mcur; msub += 8) {
+                midx = m_blk_idx + msub;
+                micro_kernel_8x1_nn_stride(&a[midx * lda + kidx], pbn1, &c[midx * ldc + off],
+                    lda, 1, ldc, kcur, c_state);
+            }
+            if (msub < mcur) {
+                midx = m_blk_idx + msub;
+                micro_kernel_8x1_nn_stride_pad(&a[midx * lda + kidx], pbn1, &c[midx * ldc + off],
+                    lda, 1, ldc, kcur, c_state, mcur - msub);
+            }
+        } else {
+            float *pbn1 = &b[kidx * ldb + off];
+            for (; msub + 8 <= mcur; msub += 8) {
+                midx = m_blk_idx + msub;
+                micro_kernel_8x1_nn_stride(&a[midx * lda + kidx], pbn1, &c[midx * ldc + off],
+                    lda, ldb, ldc, kcur, c_state);
+            }
+            if (msub < mcur) {
+                midx = m_blk_idx + msub;
+                micro_kernel_8x1_nn_stride_pad(&a[midx * lda + kidx], pbn1, &c[midx * ldc + off],
+                    lda, ldb, ldc, kcur, c_state, mcur - msub);
+            }
+        }
+    }
+}
+
+static inline void kgemm_neon_fp32_nn_blocked(float *a, float *b, float *c,
+    long int lda, long int ldb, long int ldc,
+    long int m, long int n, long int k, long int addc)
+{
+    if (m == 0 || n == 0 || k == 0) {
+        return;
+    }
+
+    long int nc_lg;
+    if (n > KP_GEM_BLOCK_NC_LG) {
+        nc_lg = align_up(n, 16);
+    } else {
+        nc_lg = KP_GEM_BLOCK_NC_LG;
+    }
+    const long int max_panel = nc_lg / 16;
+
+    float *pb_buf = (float *)__builtin_assume_aligned(
+        kgemm_pb_scratch((size_t)max_panel * 512 * 16), 64);
+    const long int pa_tiles = (m + MICRO_M - 1) / MICRO_M;
+    float *pa_buf = (float *)__builtin_assume_aligned(
+        kgemm_pa_scratch((size_t)pa_tiles * 512 * MICRO_M), 64);
+    
+    for (long int kidx = 0; kidx < k; kidx += 512) {
+        long int kcur = kidx + 512 <= k ? 512 : k - kidx;
+        long int c_state  = kidx | addc;
+        kgemm_pack_a_kmajor4(pa_buf, &a[kidx], lda, m, kcur);
+
+        for (long int n_blk_idx = 0; n_blk_idx < n; n_blk_idx += nc_lg) {
+            long int nc_cur = n_blk_idx + nc_lg <= n ? nc_lg : n - n_blk_idx;
+            long int full_panels = nc_cur / 16;
+            long int tail_n = nc_cur - full_panels * 16;
+
+            for (long int panel = 0; panel < full_panels; ++panel) {
+                float *pb = pb_buf + panel * kcur * 16;
+                kgemm_pack_b_16(pb, &b[kidx * ldb + n_blk_idx + panel * 16], ldb, kcur);
+            }
+
+            for (long int m_blk_idx = 0; m_blk_idx < m; m_blk_idx += BLOCK_M) {
+                long int mcur = m_blk_idx + BLOCK_M <= m ? BLOCK_M : m - m_blk_idx;
+                for (long int panel = 0; panel < full_panels; ++panel) {
+                    long int  nidx = n_blk_idx + panel * 16;
+                    float *pb = pb_buf + panel * kcur * 16;
+                    long int msub = 0;
+                    for (; msub + MICRO_M <= mcur; msub += MICRO_M) {
+                        long int midx = m_blk_idx + msub;
+                        float *pa = pa_buf + (midx / MICRO_M) * kcur * MICRO_M;
+                        micro_kernel_4x16_nn_pa_pb(pa, &c[midx * ldc + nidx], ldc, kcur, c_state, pb);
+                    }
+                    if (msub < mcur) {
+                        long int m_remain = mcur - msub;
+                        long int midx = m_blk_idx + msub;
+                        if (m_remain == 3) {
+                            micro_kernel_3x16_nn(&a[midx * lda + kidx], &b[kidx * ldb + nidx],
+                                &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state);
+                        } else if (m_remain == 2) {
+                            micro_kernel_2x16_nn(&a[midx * lda + kidx], &b[kidx * ldb + nidx],
+                                &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state);
+                        } else {
+                            micro_kernel_1x16_nn(&a[midx * lda + kidx], &b[kidx * ldb + nidx],
+                                &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state);
+                        }
+                    }
+                }
+                if (tail_n > 0) {
+                    long int nidx = n_blk_idx + full_panels * 16;
+                    kgemm_tail_n(a, b, c, lda, ldb, ldc, m_blk_idx, mcur,
+                        kidx, kcur, c_state, tail_n, nidx, n);
+                }
+            }
+        }
+    }
+}
+
+static inline void kgemm_neon_fp32_nn_zereocopy(float *a, float *b, float *c,
+    long int lda, long int ldb, long int ldc,
+    long int m, long int n, long int k, long int addc)
+{
+    float *pb = (float *)__builtin_assume_aligned(
+        kgemm_pb_scratch((size_t)512 * 16), 64);
+    
+    for (long int kidx = 0; kidx < k; kidx += 512) {
+        long int kcur = kidx + 512 <= k ? 512 : k - kidx;
+        for (long int m_blk_idx = 0; m_blk_idx < m; m_blk_idx += BLOCK_M) {
+            long int mcur = m_blk_idx + BLOCK_M <= m ? BLOCK_M : m - m_blk_idx;
+            for (long int nidx = 0; nidx < n; nidx += 16) {
+                long int ncur = nidx + 16 <= n ? 16 : n - nidx;
+                long int c_state = kidx | addc;
+                if (ncur == 16) {
+                    long int midx = m_blk_idx;
+                    long int msub = 0;
+                    if (mcur >= MICRO_M * 2) {
+                        for (; msub + MICRO_M <= mcur; msub += MICRO_M) {
+                            midx = m_blk_idx + msub;
+                            if (msub == 0) {
+                                micro_kernel_4x16_nn_pbg(&a[midx * lda + kidx], &b[kidx * ldb + nidx],
+                                    &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state, pb);
+                            } else {
+                                micro_kernel_4x16_nn_pb(&a[midx * lda + kidx], NULL,
+                                    &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state, pb);
+                            }
+                        }
+                    } else if (mcur >= MICRO_M) {
+                        micro_kernel_4x16_nn(&a[midx * lda + kidx], &b[kidx * ldb + nidx],
+                            &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state);
+                        msub += MICRO_M;
+                    }
+                    if (msub < mcur) {
+                        long int m_remain = mcur - msub;
+                        midx = m_blk_idx + msub;
+                        if (m_remain == 3) {
+                            micro_kernel_3x16_nn(&a[midx * lda + kidx], &b[kidx * ldb + nidx],
+                                &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state);
+                        } else if (m_remain == 2) {
+                            micro_kernel_2x16_nn(&a[midx * lda + kidx], &b[kidx * ldb + nidx],
+                                &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state);
+                        } else {
+                            micro_kernel_1x16_nn(&a[midx * lda + kidx], &b[kidx * ldb + nidx],
+                                &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state);
+                        }
+                    }
+                } else {
+                    kgemm_tail_n(a, b, c, lda, ldb, ldc, m_blk_idx, mcur, kidx, kcur, c_state,
+                        ncur, nidx, n);
+                }
+            }
+        }
+    }
+}
+
+// Compute C from A/B blocks packed once by the TensorContraction scheduler.
+// A is packed in 4-row K-major panels and B in 16-column K-major panels.
+static inline void kgemm_neon_fp32_nn_packed(float *pa, float *pb, float *c,
+    long int ldc, long int m, long int n, long int k, long int addc)
+{
+    if (m == 0 || n == 0 || k == 0) {
+        return;
+    }
+
+    for (long int nbase = 0; nbase < n; nbase += 16) {
+        const long int ncur = nbase + 16 <= n ? 16 : n - nbase;
+        float *b_panel = pb + (nbase / 16) * k * 16;
+        for (long int mbase = 0; mbase < m; mbase += 4) {
+            const long int mcur = mbase + 4 <= m ? 4 : m - mbase;
+            float *a_panel = pa + (mbase / 4) * k * 4;
+            float *output = c + mbase * ldc + nbase;
+
+            if (mcur == 4 && ncur == 16) {
+                micro_kernel_4x16_nn_pa_pb(a_panel, output, ldc, k, addc, b_panel);
+            } else {
+                float cpad[4 * 16] __attribute__((aligned(64)));
+                if (addc) {
+                    for (long int i = 0; i < 4 * 16; ++i) cpad[i] = 0.0f;
+                    for (long int i = 0; i < mcur; ++i) {
+                        kgemm_copy_f32_no_overlap(cpad + i * 16, output + i * ldc, ncur);
+                    }
+                }
+                micro_kernel_4x16_nn_pa_pb(a_panel, cpad, 16, k, addc, b_panel);
+                for (long int i = 0; i < mcur; ++i) {
+                    kgemm_copy_f32_no_overlap(output + i * ldc, cpad + i * 16, ncur);
+                }
+            }
+        }
+    }
+}
+
+static inline void kgemm_neon_fp32_nn(float *a, float *b, float *c,
+    long int lda, long int ldb, long int ldc,
+    long int m, long int n, long int k, long int addc)
+{
+    if (n >= 512) {
+        kgemm_neon_fp32_nn_blocked(a, b, c, lda, ldb, ldc, m, n, k, addc);
+    } else {
+        kgemm_neon_fp32_nn_zereocopy(a, b, c, lda, ldb, ldc, m, n, k, addc);
+    }
+}
+
 #endif  // KGEMM_NEON_KERNEL_H
