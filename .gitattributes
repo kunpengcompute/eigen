@@ -1,0 +1,2 @@
+# Patch payloads intentionally preserve the exact whitespace of validated source commits.
+*.patch -whitespace
