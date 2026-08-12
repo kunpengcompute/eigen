@@ -1798,3 +1798,903 @@ index 0000000000000000000000000000000000000000..62da8112a02928e3cfb0912a2447c50b
 +        vst1s(16,0,c4);vst1s(17,0,c4+1);vst1s(18,0,c5);vst1s(19,0,c5+1);
 +        vst1s(20,0,c6);vst1s(21,0,c6+1);vst1s(22,0,c7);vst1s(23,0,c7+1);
 +    }
++}
++
++static inline void micro_kernel_8x1_nn(float *a, float *b, float *c, long int lda, long int ldb, long int ldc, long int k, long int c_state)
++{
++    (void)ldb;
++    float *a0 = a;
++    float *a1 = a + lda, *a2 = a + (lda << 1), *a3 = a + lda + (lda << 1);
++    float *a4 = a + (lda << 2), *a5 = a + lda + (lda << 2);
++    float *a6 = a + (lda << 1) + (lda << 2), *a7 = a + lda + (lda << 1) + (lda << 2);
++    vzero_m8(0, 1, 2, 3, 4, 5, 6, 7);
++    vzero_m8(8, 9, 10, 11, 12, 13, 14, 15);
++
++    if (k >= 16) {
++        k -= 16;
++        vldp_post(24, 25, b); vldp_post(26, 27, b);
++        vldp_post(16, 17, a0); vldp_post(18, 19, a1);
++        vldp_post(20, 21, a2); vldp_post(22, 23, a3);
++        while (k >= 16) {
++            k -= 16;
++            vfmla_vec(0, 16, 24); vfmla_vec(8, 17, 25); vldp_post(16, 17, a4);
++            vfmla_vec(1, 18, 24); vfmla_vec(9, 19, 25); vldp_post(18, 19, a5);
++            vfmla_vec(2, 20, 24); vfmla_vec(10, 21, 25); vldp_post(20, 21, a6);
++            vfmla_vec(3, 22, 24); vfmla_vec(11, 23, 25); vldp_post(22, 23, a7);
++            vfmla_vec(4, 16, 24);  vfmla_vec(12, 17, 25); vldp_post(16, 17, a0);
++            vfmla_vec(5, 18, 24);  vfmla_vec(13, 19, 25); vldp_post(18, 19, a1);
++            vfmla_vec(6, 20, 24);  vfmla_vec(14, 21, 25); vldp_post(20, 21, a2);
++            vfmla_vec(7, 22, 24);  vfmla_vec(15, 23, 25); vldp_post(22, 23, a3);
++            vfmla_vec(0, 16, 26); vfmla_vec(8, 17, 27); vldp_post(16, 17, a4);
++            vfmla_vec(1, 18, 26); vfmla_vec(9, 19, 27); vldp_post(18, 19, a5);
++            vfmla_vec(2, 20, 26); vfmla_vec(10, 21, 27); vldp_post(20, 21, a6);
++            vfmla_vec(3, 22, 26); vfmla_vec(11, 23, 27); vldp_post(22, 23, a7);
++            vfmla_vec(4, 16, 26);  vfmla_vec(12, 17, 27); vldp_post(16, 17, a0);
++            vfmla_vec(5, 18, 26);  vfmla_vec(13, 19, 27); vldp_post(18, 19, a1);
++            vfmla_vec(6, 20, 26);  vfmla_vec(14, 21, 27); vldp_post(20, 21, a2);
++            vfmla_vec(7, 22, 26);  vfmla_vec(15, 23, 27); vldp_post(22, 23, a3);
++            vldp_post(24, 25, b); vldp_post(26, 27, b);
++        }
++        vfmla_vec(0, 16, 24); vfmla_vec(8, 17, 25); vldp_post(16, 17, a4);
++        vfmla_vec(1, 18, 24); vfmla_vec(9, 19, 25); vldp_post(18, 19, a5);
++        vfmla_vec(2, 20, 24); vfmla_vec(10, 21, 25); vldp_post(20, 21, a6);
++        vfmla_vec(3, 22, 24); vfmla_vec(11, 23, 25); vldp_post(22, 23, a7);
++        vfmla_vec(4, 16, 24);  vfmla_vec(12, 17, 25); vldp_post(16, 17, a0);
++        vfmla_vec(5, 18, 24);  vfmla_vec(13, 19, 25); vldp_post(18, 19, a1);
++        vfmla_vec(6, 20, 24);  vfmla_vec(14, 21, 25); vldp_post(20, 21, a2);
++        vfmla_vec(7, 22, 24);  vfmla_vec(15, 23, 25); vldp_post(22, 23, a3);
++        vfmla_vec(0, 16, 26); vfmla_vec(8, 17, 27); vldp_post(16, 17, a4);
++        vfmla_vec(1, 18, 26); vfmla_vec(9, 19, 27); vldp_post(18, 19, a5);
++        vfmla_vec(2, 20, 26); vfmla_vec(10, 21, 27); vldp_post(20, 21, a6);
++        vfmla_vec(3, 22, 26); vfmla_vec(11, 23, 27); vldp_post(22, 23, a7);
++        vfmla_vec(4, 16, 26);  vfmla_vec(12, 17, 27);
++        vfmla_vec(5, 18, 26);  vfmla_vec(13, 19, 27);
++        vfmla_vec(6, 20, 26);  vfmla_vec(14, 21, 27);
++        vfmla_vec(7, 22, 26);  vfmla_vec(15, 23, 27);
++    }
++
++    if (k >= 8) {
++        k -= 8;
++        vldp_post(24, 25, b);
++        vldp_post(16, 17, a0); vldp_post(18, 19, a1);
++        vldp_post(20, 21, a2); vldp_post(22, 23, a3);
++        vfmla_vec(0, 16, 24); vfmla_vec(8, 17, 25); vldp_post(16, 17, a4);
++        vfmla_vec(1, 18, 24); vfmla_vec(9, 19, 25); vldp_post(18, 19, a5);
++        vfmla_vec(2, 20, 24); vfmla_vec(10, 21, 25); vldp_post(20, 21, a6);
++        vfmla_vec(3, 22, 24); vfmla_vec(11, 23, 25); vldp_post(22, 23, a7);
++        vfmla_vec(4, 16, 24);  vfmla_vec(12, 17, 25);
++        vfmla_vec(5, 18, 24);  vfmla_vec(13, 19, 25);
++        vfmla_vec(6, 20, 24);  vfmla_vec(14, 21, 25);
++        vfmla_vec(7, 22, 24);  vfmla_vec(15, 23, 25);
++    }
++
++    if (k >= 4) {
++        k -= 4;
++        vldr_post(24, b);
++        vldr_post(16, a0); vfmla_vec(0, 16, 24);
++        vldr_post(17, a1); vfmla_vec(1, 17, 24);
++        vldr_post(18, a2); vfmla_vec(2, 18, 24);
++        vldr_post(19, a3); vfmla_vec(3, 19, 24);
++        vldr_post(20, a4); vfmla_vec(4, 20, 24);
++        vldr_post(21, a5); vfmla_vec(5, 21, 24);
++        vldr_post(22, a6); vfmla_vec(6, 22, 24);
++        vldr_post(23, a7); vfmla_vec(7, 23, 24);
++    }
++
++    if (k >= 2) {
++        k -= 2;
++        vzero(24); vldr_f64_post(24, b);
++        vldr_f64_post(16, a0); vfmla_vec(0, 16, 24);
++        vldr_f64_post(17, a1); vfmla_vec(1, 17, 24);
++        vldr_f64_post(18, a2); vfmla_vec(2, 18, 24);
++        vldr_f64_post(19, a3); vfmla_vec(3, 19, 24);
++        vldr_f64_post(20, a4); vfmla_vec(4, 20, 24);
++        vldr_f64_post(21, a5); vfmla_vec(5, 21, 24);
++        vldr_f64_post(22, a6); vfmla_vec(6, 22, 24);
++        vldr_f64_post(23, a7); vfmla_vec(7, 23, 24);
++    }
++
++    if (k >= 1) {
++        k -= 1;
++        vzero(24); vldr_f32_post(24, b);
++        vldr_f32_post(16, a0); vfmla_vec(0, 16, 24);
++        vldr_f32_post(17, a1); vfmla_vec(1, 17, 24);
++        vldr_f32_post(18, a2); vfmla_vec(2, 18, 24);
++        vldr_f32_post(19, a3); vfmla_vec(3, 19, 24);
++        vldr_f32_post(20, a4); vfmla_vec(4, 20, 24);
++        vldr_f32_post(21, a5); vfmla_vec(5, 21, 24);
++        vldr_f32_post(22, a6); vfmla_vec(6, 22, 24);
++        vldr_f32_post(23, a7); vfmla_vec(7, 23, 24);
++    }
++
++    vfadd(0, 0, 8);  vfadd(1, 1, 9);  vfadd(2, 2, 10);  vfadd(3, 3, 11);
++    vfadd(4, 4, 12); vfadd(5, 5, 13); vfadd(6, 6, 14); vfadd(7, 7, 15);
++
++    vhsum(0); vhsum(1); vhsum(2); vhsum(3);
++    vhsum(4); vhsum(5); vhsum(6); vhsum(7);
++
++    float *c1 = c + ldc, *c2 = c + (ldc << 1), *c3 = c + ldc + (ldc << 1);
++    float *c4 = c + (ldc << 2), *c5 = c + ldc + (ldc << 2);
++    float *c6 = c + (ldc << 1) + (ldc << 2), *c7 = c + ldc + (ldc << 1) + (ldc << 2);
++    if (c_state) {
++        vld1s(8,0,c);  vfadd_f32(0,8);vst1s(0,0,c);
++        vld1s(8,0,c1); vfadd_f32(1,8);vst1s(1,0,c1);
++        vld1s(8,0,c2); vfadd_f32(2,8);vst1s(2,0,c2);
++        vld1s(8,0,c3); vfadd_f32(3,8);vst1s(3,0,c3);
++        vld1s(8,0,c4); vfadd_f32(4,8);vst1s(4,0,c4);
++        vld1s(8,0,c5); vfadd_f32(5,8);vst1s(5,0,c5);
++        vld1s(8,0,c6); vfadd_f32(6,8);vst1s(6,0,c6);
++        vld1s(8,0,c7); vfadd_f32(7,8);vst1s(7,0,c7);
++    } else {
++        vst1s(0,0,c);vst1s(1,0,c1);vst1s(2,0,c2);vst1s(3,0,c3);
++        vst1s(4,0,c4);vst1s(5,0,c5);vst1s(6,0,c6);vst1s(7,0,c7);
++    }
++}
++
++static inline void micro_kernel_8x1_nn_stride(float *a, float *b, float *c, long int lda, long int ldb, long int ldc, long int k, long int c_state)
++{
++    (void)ldc;
++    float *a0 = a;
++    float *a1 = a + lda, *a2 = a + (lda << 1), *a3 = a + lda + (lda << 1);
++    float *a4 = a + (lda << 2), *a5 = a + lda + (lda << 2);
++    float *a6 = a + (lda << 1) + (lda << 2), *a7 = a + lda + (lda << 1) + (lda << 2);
++    vzero_m8(0, 1, 2, 3, 4, 5, 6, 7);
++    vzero_m8(8, 9, 10, 11, 12, 13, 14, 15);
++
++    if (k >= 16) {
++        k -= 16;
++        vld1s(24, 0, b); vld1s(24, 1, b + ldb);
++        vld1s(24, 2, b + (ldb << 1)); vld1s(24, 3, b + (ldb << 1) + ldb);
++        vld1s(25, 0, b + (ldb << 2)); vld1s(25, 1, b + (ldb << 2) + ldb);
++        vld1s(25, 2, b + (ldb << 2) + (ldb << 1));
++        vld1s(25, 3, b + (ldb << 2) + (ldb << 1) + ldb);
++        b += ldb << 3;
++        vld1s(26, 0, b); vld1s(26, 1, b + ldb);
++        vld1s(26, 2, b + (ldb << 1)); vld1s(26, 3, b + (ldb << 1) + ldb);
++        vld1s(27, 0, b + (ldb << 2)); vld1s(27, 1, b + (ldb << 2) + ldb);
++        vld1s(27, 2, b + (ldb << 2) + (ldb << 1));
++        vld1s(27, 3, b + (ldb << 2) + (ldb << 1) + ldb);
++        b += ldb << 3;
++
++        vldp_post(16, 17, a0); vldp_post(18, 19, a1);
++        vldp_post(20, 21, a2); vldp_post(22, 23, a3);
++        while (k >= 16) {
++            k -= 16;
++            vfmla_vec(0, 16, 24); vfmla_vec(8, 17, 25); vldp_post(16, 17, a4);
++            vfmla_vec(1, 18, 24); vfmla_vec(9, 19, 25); vldp_post(18, 19, a5);
++            vfmla_vec(2, 20, 24); vfmla_vec(10, 21, 25); vldp_post(20, 21, a6);
++            vfmla_vec(3, 22, 24); vfmla_vec(11, 23, 25); vldp_post(22, 23, a7);
++            vfmla_vec(4, 16, 24);  vfmla_vec(12, 17, 25); vldp_post(16, 17, a0);
++            vfmla_vec(5, 18, 24);  vfmla_vec(13, 19, 25); vldp_post(18, 19, a1);
++            vfmla_vec(6, 20, 24);  vfmla_vec(14, 21, 25); vldp_post(20, 21, a2);
++            vfmla_vec(7, 22, 24);  vfmla_vec(15, 23, 25); vldp_post(22, 23, a3);
++            vfmla_vec(0, 16, 26); vfmla_vec(8, 17, 27); vldp_post(16, 17, a4);
++            vfmla_vec(1, 18, 26); vfmla_vec(9, 19, 27); vldp_post(18, 19, a5);
++            vfmla_vec(2, 20, 26); vfmla_vec(10, 21, 27); vldp_post(20, 21, a6);
++            vfmla_vec(3, 22, 26); vfmla_vec(11, 23, 27); vldp_post(22, 23, a7);
++            vfmla_vec(4, 16, 26);  vfmla_vec(12, 17, 27); vldp_post(16, 17, a0);
++            vfmla_vec(5, 18, 26);  vfmla_vec(13, 19, 27); vldp_post(18, 19, a1);
++            vfmla_vec(6, 20, 26);  vfmla_vec(14, 21, 27); vldp_post(20, 21, a2);
++            vfmla_vec(7, 22, 26);  vfmla_vec(15, 23, 27); vldp_post(22, 23, a3);
++            vld1s(24, 0, b); vld1s(24, 1, b + ldb);
++            vld1s(24, 2, b + (ldb << 1)); vld1s(24, 3, b + (ldb << 1) + ldb);
++            vld1s(25, 0, b + (ldb << 2)); vld1s(25, 1, b + (ldb << 2) + ldb);
++            vld1s(25, 2, b + (ldb << 2) + (ldb << 1));
++            vld1s(25, 3, b + (ldb << 2) + (ldb << 1) + ldb);
++            b += ldb << 3;
++            vld1s(26, 0, b); vld1s(26, 1, b + ldb);
++            vld1s(26, 2, b + (ldb << 1)); vld1s(26, 3, b + (ldb << 1) + ldb);
++            vld1s(27, 0, b + (ldb << 2)); vld1s(27, 1, b + (ldb << 2) + ldb);
++            vld1s(27, 2, b + (ldb << 2) + (ldb << 1));
++            vld1s(27, 3, b + (ldb << 2) + (ldb << 1) + ldb);
++            b += ldb << 3;
++        }
++        vfmla_vec(0, 16, 24); vfmla_vec(8, 17, 25); vldp_post(16, 17, a4);
++        vfmla_vec(1, 18, 24); vfmla_vec(9, 19, 25); vldp_post(18, 19, a5);
++        vfmla_vec(2, 20, 24); vfmla_vec(10, 21, 25); vldp_post(20, 21, a6);
++        vfmla_vec(3, 22, 24); vfmla_vec(11, 23, 25); vldp_post(22, 23, a7);
++        vfmla_vec(4, 16, 24);  vfmla_vec(12, 17, 25); vldp_post(16, 17, a0);
++        vfmla_vec(5, 18, 24);  vfmla_vec(13, 19, 25); vldp_post(18, 19, a1);
++        vfmla_vec(6, 20, 24);  vfmla_vec(14, 21, 25); vldp_post(20, 21, a2);
++        vfmla_vec(7, 22, 24);  vfmla_vec(15, 23, 25); vldp_post(22, 23, a3);
++        vfmla_vec(0, 16, 26); vfmla_vec(8, 17, 27); vldp_post(16, 17, a4);
++        vfmla_vec(1, 18, 26); vfmla_vec(9, 19, 27); vldp_post(18, 19, a5);
++        vfmla_vec(2, 20, 26); vfmla_vec(10, 21, 27); vldp_post(20, 21, a6);
++        vfmla_vec(3, 22, 26); vfmla_vec(11, 23, 27); vldp_post(22, 23, a7);
++        vfmla_vec(4, 16, 26);  vfmla_vec(12, 17, 27);
++        vfmla_vec(5, 18, 26);  vfmla_vec(13, 19, 27);
++        vfmla_vec(6, 20, 26);  vfmla_vec(14, 21, 27);
++        vfmla_vec(7, 22, 26);  vfmla_vec(15, 23, 27);
++    }
++
++    if (k >= 8) {
++        k -= 8;
++        vld1s(24, 0, b); vld1s(24, 1, b + ldb);
++        vld1s(24, 2, b + (ldb << 1)); vld1s(24, 3, b + (ldb << 1) + ldb);
++        vld1s(25, 0, b + (ldb << 2)); vld1s(25, 1, b + (ldb << 2) + ldb);
++        vld1s(25, 2, b + (ldb << 2) + (ldb << 1));
++        vld1s(25, 3, b + (ldb << 2) + (ldb << 1) + ldb);
++        b += ldb << 3;
++        vldp_post(16, 17, a0); vldp_post(18, 19, a1);
++        vldp_post(20, 21, a2); vldp_post(22, 23, a3);
++        vfmla_vec(0, 16, 24); vfmla_vec(8, 17, 25); vldp_post(16, 17, a4);
++        vfmla_vec(1, 18, 24); vfmla_vec(9, 19, 25); vldp_post(18, 19, a5);
++        vfmla_vec(2, 20, 24); vfmla_vec(10, 21, 25); vldp_post(20, 21, a6);
++        vfmla_vec(3, 22, 24); vfmla_vec(11, 23, 25); vldp_post(22, 23, a7);
++        vfmla_vec(4, 16, 24);  vfmla_vec(12, 17, 25);
++        vfmla_vec(5, 18, 24);  vfmla_vec(13, 19, 25);
++        vfmla_vec(6, 20, 24);  vfmla_vec(14, 21, 25);
++        vfmla_vec(7, 22, 24);  vfmla_vec(15, 23, 25);
++    }
++
++    if (k >= 4) {
++        k -= 4;
++        vld1s(24, 0, b); vld1s(24, 1, b + ldb);
++        vld1s(24, 2, b + (ldb << 1)); vld1s(24, 3, b + (ldb << 1) + ldb);
++        b += ldb << 2;
++        vldr_post(16, a0); vfmla_vec(0, 16, 24);
++        vldr_post(17, a1); vfmla_vec(1, 17, 24);
++        vldr_post(18, a2); vfmla_vec(2, 18, 24);
++        vldr_post(19, a3); vfmla_vec(3, 19, 24);
++        vldr_post(20, a4); vfmla_vec(4, 20, 24);
++        vldr_post(21, a5); vfmla_vec(5, 21, 24);
++        vldr_post(22, a6); vfmla_vec(6, 22, 24);
++        vldr_post(23, a7); vfmla_vec(7, 23, 24);
++    }
++
++    if (k >= 2) {
++        k -= 2;
++        vzero(24); vld1s(24, 0, b); vld1s(24, 1, b + ldb);
++        b += ldb << 1;
++        vldr_f64_post(16, a0); vfmla_vec(0, 16, 24);
++        vldr_f64_post(17, a1); vfmla_vec(1, 17, 24);
++        vldr_f64_post(18, a2); vfmla_vec(2, 18, 24);
++        vldr_f64_post(19, a3); vfmla_vec(3, 19, 24);
++        vldr_f64_post(20, a4); vfmla_vec(4, 20, 24);
++        vldr_f64_post(21, a5); vfmla_vec(5, 21, 24);
++        vldr_f64_post(22, a6); vfmla_vec(6, 22, 24);
++        vldr_f64_post(23, a7); vfmla_vec(7, 23, 24);
++    }
++
++    if (k >= 1) {
++        k -= 1;
++        vzero(24); vld1s(24, 0, b);
++        b += ldb;
++        vldr_f32_post(16, a0); vfmla_vec(0, 16, 24);
++        vldr_f32_post(17, a1); vfmla_vec(1, 17, 24);
++        vldr_f32_post(18, a2); vfmla_vec(2, 18, 24);
++        vldr_f32_post(19, a3); vfmla_vec(3, 19, 24);
++        vldr_f32_post(20, a4); vfmla_vec(4, 20, 24);
++        vldr_f32_post(21, a5); vfmla_vec(5, 21, 24);
++        vldr_f32_post(22, a6); vfmla_vec(6, 22, 24);
++        vldr_f32_post(23, a7); vfmla_vec(7, 23, 24);
++    }
++
++    vfadd(0, 0, 8);  vfadd(1, 1, 9);  vfadd(2, 2, 10);  vfadd(3, 3, 11);
++    vfadd(4, 4, 12); vfadd(5, 5, 13); vfadd(6, 6, 14); vfadd(7, 7, 15);
++
++    vhsum(0); vhsum(1); vhsum(2); vhsum(3);
++    vhsum(4); vhsum(5); vhsum(6); vhsum(7);
++
++    float *c1 = c + ldc, *c2 = c + (ldc << 1), *c3 = c + ldc + (ldc << 1);
++    float *c4 = c + (ldc << 2), *c5 = c + ldc + (ldc << 2);
++    float *c6 = c + (ldc << 1) + (ldc << 2), *c7 = c + ldc + (ldc << 1) + (ldc << 2);
++    if (c_state) {
++        vld1s(16,0,c);  vfadd_f32(0,16);vst1s(0,0,c);
++        vld1s(16,0,c1); vfadd_f32(1,16);vst1s(1,0,c1);
++        vld1s(16,0,c2); vfadd_f32(2,16);vst1s(2,0,c2);
++        vld1s(16,0,c3); vfadd_f32(3,16);vst1s(3,0,c3);
++        vld1s(16,0,c4); vfadd_f32(4,16);vst1s(4,0,c4);
++        vld1s(16,0,c5); vfadd_f32(5,16);vst1s(5,0,c5);
++        vld1s(16,0,c6); vfadd_f32(6,16);vst1s(6,0,c6);
++        vld1s(16,0,c7); vfadd_f32(7,16);vst1s(7,0,c7);
++    } else {
++        vst1s(0,0,c);vst1s(1,0,c1);vst1s(2,0,c2);vst1s(3,0,c3);
++        vst1s(4,0,c4);vst1s(5,0,c5);vst1s(6,0,c6);vst1s(7,0,c7);
++    }
++}
++
++static inline void micro_kernel_4x4_nn(float *a, float *b, float *c, long int lda, long int ldb, long int ldc, long int k, long int c_state)
++{
++    float *a0 = a, *a1 = a + lda, *a2 = a + (lda << 1), *a3 = a + lda + (lda << 1);
++    float *b0 = b, *b1 = b + ldb, *b2 = b + (ldb << 1), *b3 = b + ldb + (ldb << 1);
++    vzero_m8(0, 1, 2, 3, 4, 5, 6, 7);
++    vzero_m8(8, 9, 10, 11, 12, 13, 14, 15);
++
++    if (k >= 8) {
++        k -= 8;
++        vldp_post_m4(24, 25, 26, 27, 28, 29, 30, 31, a0, a1, a2, a3);
++        vldr(16, b0, 0); b0 += ldb << 2;
++        vldr(17, b1, 0); b1 += ldb << 2;
++        vldr(18, b2, 0); b2 += ldb << 2;
++        vldr(19, b3, 0); b3 += ldb << 2;
++        vldr(20, b0, 0); b0 += ldb << 2;
++        vldr(21, b1, 0); b1 += ldb << 2;
++        vldr(22, b2, 0); b2 += ldb << 2;
++        vldr(23, b3, 0); b3 += ldb << 2;
++        while (k >= 8) {
++            k -= 8;
++            vfmla(0, 16, 24, 0); vfmla(1, 17, 24, 1);
++            vfmla(2, 18, 24, 2); vfmla(3, 19, 24, 3);
++            vldr_post(24, a0);
++            vfmla(4, 16, 25, 0); vfmla(5, 17, 25, 1);
++            vfmla(6, 18, 25, 2); vfmla(7, 19, 25, 3);
++            vldr_post(25, a1);
++            vfmla(8, 16, 26, 0);  vfmla(9, 17, 26, 1);
++            vfmla(10, 18, 26, 2); vfmla(11, 19, 26, 3);
++            vldr_post(26, a2);
++            vfmla(12, 16, 27, 0); vfmla(13, 17, 27, 1);
++            vfmla(14, 18, 27, 2); vfmla(15, 19, 27, 3);
++            vldr_post(27, a3);
++            vldr(16, b0, 0); b0 += ldb << 2;
++            vldr(17, b1, 0); b1 += ldb << 2;
++            vldr(18, b2, 0); b2 += ldb << 2;
++            vldr(19, b3, 0); b3 += ldb << 2;
++
++            vfmla(0, 20, 28, 0); vfmla(1, 21, 28, 1);
++            vfmla(2, 22, 28, 2); vfmla(3, 23, 28, 3);
++            vldr_post(28, a0);
++            vfmla(4, 20, 29, 0); vfmla(5, 21, 29, 1);
++            vfmla(6, 22, 29, 2); vfmla(7, 23, 29, 3);
++            vldr_post(29, a1);
++            vfmla(8, 20, 30, 0);  vfmla(9, 21, 30, 1);
++            vfmla(10, 22, 30, 2); vfmla(11, 23, 30, 3);
++            vldr_post(30, a2);
++            vfmla(12, 20, 31, 0); vfmla(13, 21, 31, 1);
++            vfmla(14, 22, 31, 2); vfmla(15, 23, 31, 3);
++            vldr_post(31, a3);
++            vldr(20, b0, 0); b0 += ldb << 2;
++            vldr(21, b1, 0); b1 += ldb << 2;
++            vldr(22, b2, 0); b2 += ldb << 2;
++            vldr(23, b3, 0); b3 += ldb << 2;
++        }
++        // Epilogue first group: A[0-3] (v24-v27) + B[0-3] (v16-v19)
++        vfmla(0, 16, 24, 0); vfmla(1, 17, 24, 1);
++        vfmla(2, 18, 24, 2); vfmla(3, 19, 24, 3);
++        vfmla(4, 16, 25, 0); vfmla(5, 17, 25, 1);
++        vfmla(6, 18, 25, 2); vfmla(7, 19, 25, 3);
++        vfmla(8, 16, 26, 0);  vfmla(9, 17, 26, 1);
++        vfmla(10, 18, 26, 2); vfmla(11, 19, 26, 3);
++        vfmla(12, 16, 27, 0); vfmla(13, 17, 27, 1);
++        vfmla(14, 18, 27, 2); vfmla(15, 19, 27, 3);
++        // Epilogue second group: A[4-7] (v28-v31) + B[4-7] (v20-v23)
++        vfmla(0, 20, 28, 0); vfmla(1, 21, 28, 1);
++        vfmla(2, 22, 28, 2); vfmla(3, 23, 28, 3);
++        vfmla(4, 20, 29, 0); vfmla(5, 21, 29, 1);
++        vfmla(6, 22, 29, 2); vfmla(7, 23, 29, 3);
++        vfmla(8, 20, 30, 0);  vfmla(9, 21, 30, 1);
++        vfmla(10, 22, 30, 2); vfmla(11, 23, 30, 3);
++        vfmla(12, 20, 31, 0); vfmla(13, 21, 31, 1);
++        vfmla(14, 22, 31, 2); vfmla(15, 23, 31, 3);
++    }
++
++    if (k >= 4) {
++        k -= 4;
++        vldr_post_m4(16, 17, 18, 19, a0, a1, a2, a3);
++        vldr(20, b0, 0); b0 += ldb << 2;
++        vldr(21, b1, 0); b1 += ldb << 2;
++        vldr(22, b2, 0); b2 += ldb << 2;
++        vldr(23, b3, 0); b3 += ldb << 2;
++
++        vfmla(0, 20, 16, 0); vfmla(4, 20, 17, 0);
++        vfmla(8, 20, 18, 0); vfmla(12, 20, 19, 0);
++
++        vfmla(1, 21, 16, 1); vfmla(5, 21, 17, 1);
++        vfmla(9, 21, 18, 1); vfmla(13, 21, 19, 1);
++
++        vfmla(2, 22, 16, 2); vfmla(6, 22, 17, 2);
++        vfmla(10, 22, 18, 2); vfmla(14, 22, 19, 2);
++
++        vfmla(3, 23, 16, 3); vfmla(7, 23, 17, 3);
++        vfmla(11, 23, 18, 3); vfmla(15, 23, 19, 3);
++    }
++
++    if (k >= 2) {
++        k -= 2;
++        vldr_f64_post_m4(16, 17, 18, 19, a0, a1, a2, a3);
++        vldr(20, b0, 0); b0 += ldb << 1;
++        vldr(21, b1, 0); b1 += ldb << 1;
++
++        vfmla(0, 20, 16, 0); vfmla(4, 20, 17, 0);
++        vfmla(8, 20, 18, 0); vfmla(12, 20, 19, 0);
++
++        vfmla(1, 21, 16, 1); vfmla(5, 21, 17, 1);
++        vfmla(9, 21, 18, 1); vfmla(13, 21, 19, 1);
++    }
++
++    if (k >= 1) {
++        k -= 1;
++        vldr_f32_post_m4(16, 17, 18, 19, a0, a1, a2, a3);
++        vldr(20, b0, 0);
++
++        vfmla(0, 20, 16, 0); vfmla(4, 20, 17, 0);
++        vfmla(8, 20, 18, 0); vfmla(12, 20, 19, 0);
++    }
++
++    vfadd(0, 0, 1); vfadd(2, 2, 3); vfadd(0, 0, 2);
++    vfadd(4, 4, 5); vfadd(6, 6, 7); vfadd(4, 4, 6);
++    vfadd(8, 8, 9); vfadd(10,10,11); vfadd(8, 8, 10);
++    vfadd(12,12,13); vfadd(14,14,15); vfadd(12,12,14);
++
++    float *c1 = c + ldc, *c2 = c + (ldc << 1), *c3 = c + ldc + (ldc << 1);
++    if (c_state) {
++        vldr(16, c, 0);  vfadd(0, 0, 16); vstr(0, c, 0);
++        vldr(16, c1, 0); vfadd(4, 4, 16); vstr(4, c1, 0);
++        vldr(16, c2, 0); vfadd(8, 8, 16); vstr(8, c2, 0);
++        vldr(16, c3, 0); vfadd(12,12, 16); vstr(12, c3, 0);
++    } else {
++        vstr(0, c, 0); vstr(4, c1, 0); vstr(8, c2, 0); vstr(12, c3, 0);
++    }
++}
++
++#ifndef BLOCK_M
++#define BLOCK_M 256
++#endif
++#ifndef MICRO_M
++#define MICRO_M 4
++#endif
++#ifndef KP_GEM_BLOCK_NC_LG
++#define KP_GEM_BLOCK_NC_LG 256
++#endif
++#define MICRO_N 16
++
++#include <arm_neon.h>
++#include <stddef.h>
++#include <stdlib.h>
++#include <string.h>
++
++#ifndef thread_local
++#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
++#define thread_local _Thread_local
++#else
++#define thread_local __thread
++#endif
++#endif
++
++static inline long int align_up(long int n, long int a)
++{
++    return (n + a - 1) & ~(a - 1);
++}
++
++struct kp_gemm_aligned_scratch {
++    float *p;
++    size_t cap;
++};
++
++static inline float *get_scratch(struct kp_gemm_aligned_scratch *s, size_t count)
++{
++    if (s->cap < count) {
++        size_t bytes = count * sizeof(float);
++        bytes = (bytes + 63u) & ~((size_t)63u);
++        float *np = (float *)aligned_alloc(64, bytes);
++        if (np == NULL) {
++            return NULL;
++        }
++        free(s->p);
++        s->p = np;
++        s->cap = bytes / sizeof(float);
++    }
++    return s->p;
++}
++
++static inline float *kgemm_pb_scratch(size_t count)
++{
++    static thread_local struct kp_gemm_aligned_scratch scratch;
++    return get_scratch(&scratch, count);
++}
++
++static inline float *kgemm_pa_scratch(size_t count)
++{
++    static thread_local struct kp_gemm_aligned_scratch scratch;
++    return get_scratch(&scratch, count);
++}
++
++static inline float *kgemm_pa_pad_scratch(size_t count)
++{
++    static thread_local struct kp_gemm_aligned_scratch scratch;
++    return get_scratch(&scratch, count);
++}
++
++#if defined(__GNUC__) && !defined(__clang__)
++#define KP_GEMM_COPY_NO_LIB __attribute__((noinline, optimize("no-tree-loop-distribute-patterns")))
++#else
++#define KP_GEMM_COPY_NO_LIB __attribute__((noinline))
++#endif
++static KP_GEMM_COPY_NO_LIB void kgemm_copy_f32_no_overlap(float *dst, const float *src, long int count)
++{
++    const long int vec_cnt = count & ~3L;
++    const long int tail_cnt = count & 3L;
++    long int i = 0;
++    for (; i < vec_cnt; i += 4) {
++        const float32x4_t v = vld1q_f32(src + i);
++        vst1q_f32(dst + i, v);
++    }
++    if (tail_cnt & 2L) {
++        vst1_f32(dst + vec_cnt, vld1_f32(src + vec_cnt));
++    }
++    if (tail_cnt & 1L) {
++        const long int tail_idx = vec_cnt + (tail_cnt & 2L);
++        dst[tail_idx] = src[tail_idx];
++    }
++}
++#undef KP_GEMM_COPY_NO_LIB
++
++static inline void kgemm_copy_16_f32_no_overlap(float *dst, const float *src)
++{
++    const float32x4_t v0 = vld1q_f32(src + 0);
++    const float32x4_t v1 = vld1q_f32(src + 4);
++    const float32x4_t v2 = vld1q_f32(src + 8);
++    const float32x4_t v3 = vld1q_f32(src + 12);
++    vst1q_f32(dst + 0, v0);
++    vst1q_f32(dst + 4, v1);
++    vst1q_f32(dst + 8, v2);
++    vst1q_f32(dst + 12, v3);
++}
++
++static inline void micro_kernel_8x1_nn_pad(float *a, float *b, float *c,
++    long int lda, long int ldb, long int ldc, long int k, long int c_state, long int valid_m)
++{
++    float *apad = (float *)__builtin_assume_aligned(
++        kgemm_pa_pad_scratch((size_t)8 * 512), 64);
++    float cpad[8] __attribute__((aligned(32)));
++    long int pad_lda = align_up(k, 16);
++
++    for (long int i = 0; i < valid_m; ++i) {
++        kgemm_copy_f32_no_overlap(&apad[i * pad_lda], &a[i * lda], k);
++    }
++    if (c_state) {
++        if (ldc == 1) {
++            kgemm_copy_f32_no_overlap(cpad, c, valid_m);
++        } else {
++            for (long int i = 0; i < valid_m; ++i) {
++                cpad[i] = c[i * ldc];
++            }
++        }
++    }
++
++    micro_kernel_8x1_nn(apad, b, cpad, pad_lda, ldb, 1, k, c_state);
++    if (ldc == 1) {
++        kgemm_copy_f32_no_overlap(c, cpad, valid_m);
++    } else {
++        for (long int i = 0; i < valid_m; ++i) {
++            c[i * ldc] = cpad[i];
++        }
++    }
++}
++
++static inline void micro_kernel_8x1_nn_stride_pad(float *a, float *b, float *c,
++    long int lda, long int ldb, long int ldc, long int k, long int c_state, long int valid_m)
++{
++    float *apad = (float *)__builtin_assume_aligned(
++        kgemm_pa_pad_scratch((size_t)8 * 512), 64);
++    float cpad[8] __attribute__((aligned(32)));
++    long int pad_lda = align_up(k, 16);
++
++    for (long int i = 0; i < valid_m; ++i) {
++        kgemm_copy_f32_no_overlap(&apad[i * pad_lda], &a[i * lda], k);
++    }
++    if (c_state) {
++        if (ldc == 1) {
++            kgemm_copy_f32_no_overlap(cpad, c, valid_m);
++        } else {
++            for (long int i = 0; i < valid_m; ++i) {
++                cpad[i] = c[i * ldc];
++            }
++        }
++    }
++
++    micro_kernel_8x1_nn_stride(apad, b, cpad, pad_lda, ldb, 1, k, c_state);
++    if (ldc == 1) {
++        kgemm_copy_f32_no_overlap(c, cpad, valid_m);
++    } else {
++        for (long int i = 0; i < valid_m; ++i) {
++            c[i * ldc] = cpad[i];
++        }
++    }
++}
++
++static inline void micro_kernel_8x8_nn_pad(float *a, float *b, float *c,
++    long int lda, long int ldb, long int ldc, long int k, long int c_state, long int valid_m)
++{
++    float *apad = (float *)__builtin_assume_aligned(
++        kgemm_pa_pad_scratch((size_t)8 * 512), 64);
++    float cpad[8 * 8] __attribute__((aligned(32)));
++    long int pad_lda = align_up(k, 16);
++
++    for (long int i = 0; i < valid_m; ++i) {
++        kgemm_copy_f32_no_overlap(&apad[i * pad_lda], &a[i * lda], k);
++    }
++    if (c_state) {
++        for (long int i = 0; i < valid_m; ++i) {
++            kgemm_copy_f32_no_overlap(&cpad[i * 8], &c[i * ldc], 8);
++        }
++    }
++
++    micro_kernel_8x8_nn(apad, b, cpad, pad_lda, ldb, 8, k, c_state);
++
++    for (long int i = 0; i < valid_m; ++i) {
++        kgemm_copy_f32_no_overlap(&c[i * ldc], &cpad[i * 8], 8);
++    }
++}
++
++static inline void micro_kernel_4x4_nn_pad(float *a, float *b, float *c,
++    long int lda, long int ldb, long int ldc, long int k, long int c_state, long int valid_m)
++{
++    float *apad = (float *)__builtin_assume_aligned(
++        kgemm_pa_pad_scratch((size_t)8 * 512), 64);
++    float cpad[4 * 4] __attribute__((aligned(32)));
++    long int pad_lda = align_up(k, 16);
++
++    for (long int i = 0; i < valid_m; ++i) {
++        kgemm_copy_f32_no_overlap(&apad[i * pad_lda], &a[i * lda], k);
++    }
++    if (c_state) {
++        for (long int i = 0; i < valid_m; ++i) {
++            kgemm_copy_f32_no_overlap(&cpad[i * 4], &c[i * ldc], 4);
++        }
++    }
++
++    micro_kernel_4x4_nn(apad, b, cpad, pad_lda, ldb, 4, k, c_state);
++
++    for (long int i = 0; i < valid_m; ++i) {
++        kgemm_copy_f32_no_overlap(&c[i * ldc], &cpad[i * 4], 4);
++    }
++}
++
++static inline void micro_kernel_8x2_nn_pad(float *a, float *b, float *c,
++    long int lda, long int ldb, long int ldc, long int k, long int c_state, long int valid_m)
++{
++    float *apad = (float *)__builtin_assume_aligned(
++        kgemm_pa_pad_scratch((size_t)8 * 512), 64);
++    float cpad[8 * 2] __attribute__((aligned(32)));
++    long int pad_lda = align_up(k, 16);
++
++    for (long int i = 0; i < valid_m; ++i) {
++        kgemm_copy_f32_no_overlap(&apad[i * pad_lda], &a[i * lda], k);
++    }
++    if (c_state) {
++        for (long int i = 0; i < valid_m; ++i) {
++            kgemm_copy_f32_no_overlap(&cpad[i * 2], &c[i * ldc], 2);
++        }
++    }
++
++    micro_kernel_8x2_nn(apad, b, cpad, pad_lda, ldb, 2, k, c_state);
++
++    for (long int i = 0; i < valid_m; ++i) {
++        kgemm_copy_f32_no_overlap(&c[i * ldc], &cpad[i * 2], 2);
++    }
++} 
++
++static inline void kgemm_pack_b_16(float *pb, const float *b, long int ldb, long int k)
++{
++    for (long int kk = 0; kk < k; ++kk) {
++        kgemm_copy_16_f32_no_overlap(pb + kk * 16, b + kk * ldb);
++    }
++}
++
++static inline void kgemm_pack_b_kmajor16(float *pb, const float *b,
++    long int ldb, long int n, long int k)
++{
++    for (long int nbase = 0; nbase < n; nbase += 16) {
++        const long int ncur = nbase + 16 <= n ? 16 : n - nbase;
++        float *panel = pb + (nbase / 16) * k * 16;
++        for (long int kk = 0; kk < k; ++kk) {
++            float *dst = panel + kk * 16;
++            const float *src = b + kk * ldb + nbase;
++            if (ncur == 16) {
++                kgemm_copy_16_f32_no_overlap(dst, src);
++            } else {
++                long int lane = 0;
++                for (; lane < ncur; ++lane) dst[lane] = src[lane];
++                for (; lane < 16; ++lane) dst[lane] = 0.0f;
++            }
++        }
++    }
++}
++
++static inline void kgemm_pack_a_kmajor4(float *pa, const float *a, long int lda, long int m, long int k)
++{
++    for (long int mbase = 0; mbase < m; mbase += MICRO_M) {
++        float *panel = pa + (mbase / MICRO_M) * k * MICRO_M;
++        if (mbase + MICRO_M <= m) {
++            const float *a0 = a + mbase * lda;
++            const float *a1 = a0 + lda;
++            const float *a2 = a1 + lda;
++            const float *a3 = a2 + lda;
++            long int kk = 0;
++            const long int peeled_k = k & ~(long)(MICRO_M - 1);
++            for (; kk < peeled_k; kk += MICRO_M) {
++                float32x4_t r0 = vld1q_f32(a0 + kk);
++                float32x4_t r1 = vld1q_f32(a1 + kk);
++                float32x4_t r2 = vld1q_f32(a2 + kk);
++                float32x4_t r3 = vld1q_f32(a3 + kk);
++                float32x4x2_t t01 = vtrnq_f32(r0, r1);
++                float32x4x2_t t23 = vtrnq_f32(r2, r3);
++                float32x4_t c0 = vcombine_f32(vget_low_f32(t01.val[0]), vget_low_f32(t23.val[0]));
++                float32x4_t c1 = vcombine_f32(vget_low_f32(t01.val[1]), vget_low_f32(t23.val[1]));
++                float32x4_t c2 = vcombine_f32(vget_high_f32(t01.val[0]), vget_high_f32(t23.val[0]));
++                float32x4_t c3 = vcombine_f32(vget_high_f32(t01.val[1]), vget_high_f32(t23.val[1]));
++                float *dst = panel + kk * MICRO_M;
++                vst1q_f32(dst + 0, c0);
++                vst1q_f32(dst + 4, c1);
++                vst1q_f32(dst + 8, c2);
++                vst1q_f32(dst + 12, c3);
++            }
++            for (; kk < k; ++kk) {
++                float *dst = panel + kk * MICRO_M;
++                dst[0] = a0[kk];
++                dst[1] = a1[kk];
++                dst[2] = a2[kk];
++                dst[3] = a3[kk];
++            }
++        } else {
++            for (long int kk = 0; kk < k; ++kk) {
++                float *dst = panel + kk * MICRO_M;
++                for (long int lane = 0; lane < MICRO_M; ++lane) {
++                    const long int row = mbase + lane;
++                    dst[lane] = row < m ? a[row * lda + kk] : 0.0f;
++                }
++            }
++        }
++    }
++}
++
++static inline void kgemm_tail_n(float *a, float *b, float *c,
++    long int lda, long int ldb, long int ldc,
++    long int m_blk_idx, long int mcur, long int kidx, long int kcur,
++    long int c_state, long int nn, long int off, long int n)
++{
++    if (nn >= 8) {
++        long int midx = 0;
++        long int msub = 0;
++        for (; msub + 8 <= mcur; msub += 8) {
++            midx = m_blk_idx + msub;
++            micro_kernel_8x8_nn(&a[midx * lda + kidx], &b[kidx * ldb + off], &c[midx * ldc + off],
++                lda, ldb, ldc, kcur, c_state);
++        }
++        if (msub < mcur) {
++            midx = m_blk_idx + msub;
++            micro_kernel_8x8_nn_pad(&a[midx * lda + kidx], &b[kidx * ldb + off], &c[midx * ldc + off],
++                lda, ldb, ldc, kcur, c_state, mcur - msub);
++        }
++        nn -= 8;
++        off += 8;
++    }
++    if (nn >= 4) {
++        long int midx = 0;
++        long int msub = 0;
++        for (; msub + 4 <= mcur; msub += 4) {
++            midx = m_blk_idx + msub;
++            micro_kernel_4x4_nn(&a[midx * lda + kidx], &b[kidx * ldb + off], &c[midx * ldc + off],
++                lda, ldb, ldc, kcur, c_state);
++        }
++        if (msub < mcur) {
++            midx = m_blk_idx + msub;
++            micro_kernel_4x4_nn_pad(&a[midx * lda + kidx], &b[kidx * ldb + off], &c[midx * ldc + off],
++                lda, ldb, ldc, kcur, c_state, mcur - msub);
++        }
++        nn -= 4;
++        off += 4;
++    }
++    if (nn >= 2) {
++        long int midx = 0;
++        long int msub = 0;
++        for (; msub + 8 <= mcur; msub += 8) {
++            midx = m_blk_idx + msub;
++            micro_kernel_8x2_nn(&a[midx * lda + kidx], &b[kidx * ldb + off], &c[midx * ldc + off],
++                lda, ldb, ldc, kcur, c_state);
++        }
++        if (msub < mcur) {
++            midx = m_blk_idx + msub;
++            micro_kernel_8x2_nn_pad(&a[midx * lda + kidx], &b[kidx * ldb + off], &c[midx * ldc + off],
++                lda, ldb, ldc, kcur, c_state, mcur - msub);
++        }
++        nn -= 2;
++        off += 2;
++    }
++    if (nn >= 1) {
++        long int midx = 0;
++        long int msub = 0;
++        if (n == 1 && ldb == 1) {
++            float *pbn1 = &b[kidx * ldb + off];
++            for (; msub + 8 <= mcur; msub += 8) {
++                midx = m_blk_idx + msub;
++                micro_kernel_8x1_nn_stride(&a[midx * lda + kidx], pbn1, &c[midx * ldc + off],
++                    lda, 1, ldc, kcur, c_state);
++            }
++            if (msub < mcur) {
++                midx = m_blk_idx + msub;
++                micro_kernel_8x1_nn_stride_pad(&a[midx * lda + kidx], pbn1, &c[midx * ldc + off],
++                    lda, 1, ldc, kcur, c_state, mcur - msub);
++            }
++        } else {
++            float *pbn1 = &b[kidx * ldb + off];
++            for (; msub + 8 <= mcur; msub += 8) {
++                midx = m_blk_idx + msub;
++                micro_kernel_8x1_nn_stride(&a[midx * lda + kidx], pbn1, &c[midx * ldc + off],
++                    lda, ldb, ldc, kcur, c_state);
++            }
++            if (msub < mcur) {
++                midx = m_blk_idx + msub;
++                micro_kernel_8x1_nn_stride_pad(&a[midx * lda + kidx], pbn1, &c[midx * ldc + off],
++                    lda, ldb, ldc, kcur, c_state, mcur - msub);
++            }
++        }
++    }
++}
++
++static inline void kgemm_neon_fp32_nn_blocked(float *a, float *b, float *c,
++    long int lda, long int ldb, long int ldc,
++    long int m, long int n, long int k, long int addc)
++{
++    if (m == 0 || n == 0 || k == 0) {
++        return;
++    }
++
++    long int nc_lg;
++    if (n > KP_GEM_BLOCK_NC_LG) {
++        nc_lg = align_up(n, 16);
++    } else {
++        nc_lg = KP_GEM_BLOCK_NC_LG;
++    }
++    const long int max_panel = nc_lg / 16;
++
++    float *pb_buf = (float *)__builtin_assume_aligned(
++        kgemm_pb_scratch((size_t)max_panel * 512 * 16), 64);
++    const long int pa_tiles = (m + MICRO_M - 1) / MICRO_M;
++    float *pa_buf = (float *)__builtin_assume_aligned(
++        kgemm_pa_scratch((size_t)pa_tiles * 512 * MICRO_M), 64);
++    
++    for (long int kidx = 0; kidx < k; kidx += 512) {
++        long int kcur = kidx + 512 <= k ? 512 : k - kidx;
++        long int c_state  = kidx | addc;
++        kgemm_pack_a_kmajor4(pa_buf, &a[kidx], lda, m, kcur);
++
++        for (long int n_blk_idx = 0; n_blk_idx < n; n_blk_idx += nc_lg) {
++            long int nc_cur = n_blk_idx + nc_lg <= n ? nc_lg : n - n_blk_idx;
++            long int full_panels = nc_cur / 16;
++            long int tail_n = nc_cur - full_panels * 16;
++
++            for (long int panel = 0; panel < full_panels; ++panel) {
++                float *pb = pb_buf + panel * kcur * 16;
++                kgemm_pack_b_16(pb, &b[kidx * ldb + n_blk_idx + panel * 16], ldb, kcur);
++            }
++
++            for (long int m_blk_idx = 0; m_blk_idx < m; m_blk_idx += BLOCK_M) {
++                long int mcur = m_blk_idx + BLOCK_M <= m ? BLOCK_M : m - m_blk_idx;
++                for (long int panel = 0; panel < full_panels; ++panel) {
++                    long int  nidx = n_blk_idx + panel * 16;
++                    float *pb = pb_buf + panel * kcur * 16;
++                    long int msub = 0;
++                    for (; msub + MICRO_M <= mcur; msub += MICRO_M) {
++                        long int midx = m_blk_idx + msub;
++                        float *pa = pa_buf + (midx / MICRO_M) * kcur * MICRO_M;
++                        micro_kernel_4x16_nn_pa_pb(pa, &c[midx * ldc + nidx], ldc, kcur, c_state, pb);
++                    }
++                    if (msub < mcur) {
++                        long int m_remain = mcur - msub;
++                        long int midx = m_blk_idx + msub;
++                        if (m_remain == 3) {
++                            micro_kernel_3x16_nn(&a[midx * lda + kidx], &b[kidx * ldb + nidx],
++                                &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state);
++                        } else if (m_remain == 2) {
++                            micro_kernel_2x16_nn(&a[midx * lda + kidx], &b[kidx * ldb + nidx],
++                                &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state);
++                        } else {
++                            micro_kernel_1x16_nn(&a[midx * lda + kidx], &b[kidx * ldb + nidx],
++                                &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state);
++                        }
++                    }
++                }
++                if (tail_n > 0) {
++                    long int nidx = n_blk_idx + full_panels * 16;
++                    kgemm_tail_n(a, b, c, lda, ldb, ldc, m_blk_idx, mcur,
++                        kidx, kcur, c_state, tail_n, nidx, n);
++                }
++            }
++        }
++    }
++}
++
++static inline void kgemm_neon_fp32_nn_zereocopy(float *a, float *b, float *c,
++    long int lda, long int ldb, long int ldc,
