@@ -853,4 +853,769 @@ static inline void micro_kernel_4x16_nn_pb(float *a, float *b, float *c, long in
     }
 }
 
+static inline void micro_kernel_4x16_nn_pa_pb(float *pa, float *c, long int ldc, long int k, long int c_state, float *pb)
+{
+#define PA_COMPUTE(a, b0, b1, b2, b3) \
+    vfmla_m4_pa(16, 20, 24, 28, b0, a); \
+    vfmla_m4_pa(17, 21, 25, 29, b1, a); \
+    vfmla_m4_pa(18, 22, 26, 30, b2, a); \
+    vfmla_m4_pa(19, 23, 27, 31, b3, a);
+
+#define PA_COMPUTE_LOAD(a, b0, b1, b2, b3, l0, l1, l2, l3, pb_addr) \
+    vfmla_m4_pa(16, 20, 24, 28, b0, a); vldr(l0, pb_addr, 0); \
+    vfmla_m4_pa(17, 21, 25, 29, b1, a); vldr(l1, pb_addr, 16); \
+    vfmla_m4_pa(18, 22, 26, 30, b2, a); vldr(l2, pb_addr, 32); \
+    vfmla_m4_pa(19, 23, 27, 31, b3, a); vldr(l3, pb_addr, 48); \
+    pb_addr = (pb_addr) + 16;
+
+    float *c1 = c + ldc;
+    float *c2 = c + (ldc << 1);
+    float *c3 = c1 + (ldc << 1);
+    long int k8 = k >> 3;
+    long int ktail = k & 7;
+
+    vzero_m8(16, 17, 18, 19, 20, 21, 22, 23);
+    vzero_m8(24, 25, 26, 27, 28, 29, 30, 31);
+
+    while (k8 > 0) {
+        vldp(0, 1, pa, 0);
+        vldp(2, 3, pa, 32);
+        vldp(4, 5, pa, 64);
+        vldp(6, 7, pa, 96);
+        pa += 32;
+        vldp(8, 9, pb, 0);
+        vldp(10, 11, pb, 32);
+        pb += 16;
+        vldp(12, 13, pb, 0);
+        vldp(14, 15, pb, 32);
+        pb += 16;
+
+        PA_COMPUTE(0, 8, 9, 10, 11);
+        PA_COMPUTE_LOAD(1, 12, 13, 14, 15, 8, 9, 10, 11, pb);
+        PA_COMPUTE_LOAD(2, 8, 9, 10, 11, 12, 13, 14, 15, pb);
+        PA_COMPUTE_LOAD(3, 12, 13, 14, 15, 8, 9, 10, 11, pb);
+        PA_COMPUTE_LOAD(4, 8, 9, 10, 11, 12, 13, 14, 15, pb);
+        PA_COMPUTE_LOAD(5, 12, 13, 14, 15, 8, 9, 10, 11, pb);
+        PA_COMPUTE_LOAD(6, 8, 9, 10, 11, 12, 13, 14, 15, pb);
+        PA_COMPUTE(7, 12, 13, 14, 15);
+        k8--;
+    }
+
+    while (ktail > 0) {
+        vldr_post(0, pa);
+        vldp(8, 9, pb, 0);
+        vldp(10, 11, pb, 32);
+        pb += 16;
+        PA_COMPUTE(0, 8, 9, 10, 11);
+        ktail--;
+    }
+
+    if (c_state) {
+        vldr(0, c, 0);  vfadd(16, 16, 0);  vstr(16, c, 0);
+        vldr(1, c, 16);  vfadd(17, 17, 1);  vstr(17, c, 16);
+        vldr(2, c, 32);  vfadd(18, 18, 2);  vstr(18, c, 32);
+        vldr(3, c, 48);  vfadd(19, 19, 3);  vstr(19, c, 48);
+        vldr(4, c1, 0);  vfadd(20, 20, 4);  vstr(20, c1, 0);
+        vldr(5, c1, 16);  vfadd(21, 21, 5);  vstr(21, c1, 16);
+        vldr(6, c1, 32);  vfadd(22, 22, 6);  vstr(22, c1, 32);
+        vldr(7, c1, 48);  vfadd(23, 23, 7);  vstr(23, c1, 48);
+        vldr(8, c2, 0);  vfadd(24, 24, 8);  vstr(24, c2, 0);
+        vldr(9, c2, 16);  vfadd(25, 25, 9);  vstr(25, c2, 16);
+        vldr(10, c2, 32);  vfadd(26, 26, 10);  vstr(26, c2, 32);
+        vldr(11, c2, 48);  vfadd(27, 27, 11);  vstr(27, c2, 48);
+        vldr(12, c3, 0);  vfadd(28, 28, 12);  vstr(28, c3, 0);
+        vldr(13, c3, 16);  vfadd(29, 29, 13);  vstr(29, c3, 16);
+        vldr(14, c3, 32);  vfadd(30, 30, 14);  vstr(30, c3, 32);
+        vldr(15, c3, 48);  vfadd(31, 31, 15);  vstr(31, c3, 48);
+    } else {
+        vstr(16, c, 0);  vstr(17, c, 16);  vstr(18, c, 32);  vstr(19, c, 48);
+        vstr(20, c1, 0);  vstr(21, c1, 16);  vstr(22, c1, 32);  vstr(23, c1, 48);
+        vstr(24, c2, 0);  vstr(25, c2, 16);  vstr(26, c2, 32);  vstr(27, c2, 48);
+        vstr(28, c3, 0);  vstr(29, c3, 16);  vstr(30, c3, 32);  vstr(31, c3, 48);
+    }
+
+#undef PA_COMPUTE
+#undef PA_COMPUTE_LOAD
+}
+
+static inline void micro_kernel_3x16_nn(float *a, float *b, float *c, long int lda, long int ldb, long int ldc, long int k, long int c_state)
+{
+    float *a1 = a + lda;
+    float *a2 = a + (lda << 1);
+    float *b1 = b + ldb;
+    float *b2 = b + (ldb << 1);
+    float *b3 = b1 + (ldb << 1);
+    vzero_m8(6, 7, 16, 17, 18, 19, 20, 21);
+    vzero_m4(22, 23, 24, 25);
+
+    if (k >= 8) {
+        k -= 8;
+        vldp_post_m3(0, 1, 2, 3, 4, 5, a, a1, a2);
+        vldp(26, 27, b, 0); vldp(28, 29, b, 32);
+        b = b + (ldb << 2);
+        vldp(30, 31, b1, 0); vldp(8, 9, b1, 32);
+        b1 = b1 + (ldb << 2);
+        while (k >= 8) {
+            k -= 8;
+            vfmla_m3(6, 18, 22, 26, 0, 1, 2, 0); vldr(26, b2, 0);
+            vfmla_m3(7, 19, 23, 27, 0, 1, 2, 0); vldr(27, b2, 16);
+            vfmla_m3(16, 20, 24, 28, 0, 1, 2, 0); vldr(28, b2, 32);
+            vfmla_m3(17, 21, 25, 29, 0, 1, 2, 0); vldr(29, b2, 48);
+            b2 = b2 + (ldb << 2);
+
+            vfmla_m3(6, 18, 22, 30, 0, 1, 2, 1); vldr(30, b3, 0);
+            vfmla_m3(7, 19, 23, 31, 0, 1, 2, 1); vldr(31, b3, 16);
+            vfmla_m3(16, 20, 24, 8, 0, 1, 2, 1); vldr(8, b3, 32);
+            vfmla_m3(17, 21, 25, 9, 0, 1, 2, 1); vldr(9, b3, 48);
+            b3 = b3 + (ldb << 2);
+
+            vfmla_m3(6, 18, 22, 26, 0, 1, 2, 2); vldr(26, b, 0);
+            vfmla_m3(7, 19, 23, 27, 0, 1, 2, 2); vldr(27, b, 16);
+            vfmla_m3(16, 20, 24, 28, 0, 1, 2, 2); vldr(28, b, 32);
+            vfmla_m3(17, 21, 25, 29, 0, 1, 2, 2); vldr(29, b, 48);
+            b = b + (ldb << 2);
+
+            vfmla_m3(6, 18, 22, 30, 0, 1, 2, 3); vldr(30, b1, 0);
+            vfmla_m3(7, 19, 23, 31, 0, 1, 2, 3); vldr(31, b1, 16);
+            vfmla_m3(16, 20, 24, 8, 0, 1, 2, 3); vldr(8, b1, 32);
+            vfmla_m3(17, 21, 25, 9, 0, 1, 2, 3);
+            vldr_post(0, a); vldr_post(1, a1); vldr_post(2, a2);
+            vldr(9, b1, 48);
+            b1 = b1 + (ldb << 2);
+
+            vfmla_m3(6, 18, 22, 26, 3, 4, 5, 0); vldr(26, b2, 0);
+            vfmla_m3(7, 19, 23, 27, 3, 4, 5, 0); vldr(27, b2, 16);
+            vfmla_m3(16, 20, 24, 28, 3, 4, 5, 0); vldr(28, b2, 32);
+            vfmla_m3(17, 21, 25, 29, 3, 4, 5, 0); vldr(29, b2, 48);
+            b2 = b2 + (ldb << 2);
+
+            vfmla_m3(6, 18, 22, 30, 3, 4, 5, 1); vldr(30, b3, 0);
+            vfmla_m3(7, 19, 23, 31, 3, 4, 5, 1); vldr(31, b3, 16);
+            vfmla_m3(16, 20, 24, 8, 3, 4, 5, 1); vldr(8, b3, 32);
+            vfmla_m3(17, 21, 25, 9, 3, 4, 5, 1); vldr(9, b3, 48);
+            b3 = b3 + (ldb << 2);
+
+            vfmla_m3(6, 18, 22, 26, 3, 4, 5, 2); vldr(26, b, 0);
+            vfmla_m3(7, 19, 23, 27, 3, 4, 5, 2); vldr(27, b, 16);
+            vfmla_m3(16, 20, 24, 28, 3, 4, 5, 2); vldr(28, b, 32);
+            vfmla_m3(17, 21, 25, 29, 3, 4, 5, 2); vldr(29, b, 48);
+            b = b + (ldb << 2);
+
+            vfmla_m3(6, 18, 22, 30, 3, 4, 5, 3); vldr(30, b1, 0);
+            vfmla_m3(7, 19, 23, 31, 3, 4, 5, 3); vldr(31, b1, 16);
+            vfmla_m3(16, 20, 24, 8, 3, 4, 5, 3); vldr(8, b1, 32);
+            vfmla_m3(17, 21, 25, 9, 3, 4, 5, 3);
+            vldr_post(3, a); vldr_post(4, a1); vldr_post(5, a2);
+            vldr(9, b1, 48);
+            b1 = b1 + (ldb << 2);
+        }
+        // Epilogue: process the last 8 pre-loaded A elements
+        vfmla_m3(6, 18, 22, 26, 0, 1, 2, 0); vldr(26, b2, 0);
+        vfmla_m3(7, 19, 23, 27, 0, 1, 2, 0); vldr(27, b2, 16);
+        vfmla_m3(16, 20, 24, 28, 0, 1, 2, 0); vldr(28, b2, 32);
+        vfmla_m3(17, 21, 25, 29, 0, 1, 2, 0); vldr(29, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla_m3(6, 18, 22, 30, 0, 1, 2, 1); vldr(30, b3, 0);
+        vfmla_m3(7, 19, 23, 31, 0, 1, 2, 1); vldr(31, b3, 16);
+        vfmla_m3(16, 20, 24, 8, 0, 1, 2, 1); vldr(8, b3, 32);
+        vfmla_m3(17, 21, 25, 9, 0, 1, 2, 1); vldr(9, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla_m3(6, 18, 22, 26, 0, 1, 2, 2); vldr(26, b, 0);
+        vfmla_m3(7, 19, 23, 27, 0, 1, 2, 2); vldr(27, b, 16);
+        vfmla_m3(16, 20, 24, 28, 0, 1, 2, 2); vldr(28, b, 32);
+        vfmla_m3(17, 21, 25, 29, 0, 1, 2, 2); vldr(29, b, 48);
+        b = b + (ldb << 2);
+
+        vfmla_m3(6, 18, 22, 30, 0, 1, 2, 3); vldr(30, b1, 0);
+        vfmla_m3(7, 19, 23, 31, 0, 1, 2, 3); vldr(31, b1, 16);
+        vfmla_m3(16, 20, 24, 8, 0, 1, 2, 3); vldr(8, b1, 32);
+        vfmla_m3(17, 21, 25, 9, 0, 1, 2, 3);
+        vldr(9, b1, 48);
+        b1 = b1 + (ldb << 2);
+
+        // Second half of epilogue: lanes 0-3 of v4-v6
+        vfmla_m3(6, 18, 22, 26, 3, 4, 5, 0); vldr(26, b2, 0);
+        vfmla_m3(7, 19, 23, 27, 3, 4, 5, 0); vldr(27, b2, 16);
+        vfmla_m3(16, 20, 24, 28, 3, 4, 5, 0); vldr(28, b2, 32);
+        vfmla_m3(17, 21, 25, 29, 3, 4, 5, 0); vldr(29, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla_m3(6, 18, 22, 30, 3, 4, 5, 1); vldr(30, b3, 0);
+        vfmla_m3(7, 19, 23, 31, 3, 4, 5, 1); vldr(31, b3, 16);
+        vfmla_m3(16, 20, 24, 8, 3, 4, 5, 1); vldr(8, b3, 32);
+        vfmla_m3(17, 21, 25, 9, 3, 4, 5, 1); vldr(9, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla_m3(6, 18, 22, 26, 3, 4, 5, 2);
+        vfmla_m3(7, 19, 23, 27, 3, 4, 5, 2);
+        vfmla_m3(16, 20, 24, 28, 3, 4, 5, 2);
+        vfmla_m3(17, 21, 25, 29, 3, 4, 5, 2);
+
+        vfmla_m3(6, 18, 22, 30, 3, 4, 5, 3);
+        vfmla_m3(7, 19, 23, 31, 3, 4, 5, 3);
+        vfmla_m3(16, 20, 24, 8, 3, 4, 5, 3);
+        vfmla_m3(17, 21, 25, 9, 3, 4, 5, 3);
+    }
+
+    if (k >= 4) {
+        k -= 4;
+        vldr_post_m3(0, 1, 2, a, a1, a2);
+        vldp(26, 27, b, 0); vldp(28, 29, b, 32);
+        b = b + (ldb << 2);
+        vldp(30, 31, b1, 0); vldp(8, 9, b1, 32);
+        b1 = b1 + (ldb << 2);
+
+        vfmla_m3(6, 18, 22, 26, 0, 1, 2, 0); vldr(26, b2, 0);
+        vfmla_m3(7, 19, 23, 27, 0, 1, 2, 0); vldr(27, b2, 16);
+        vfmla_m3(16, 20, 24, 28, 0, 1, 2, 0); vldr(28, b2, 32);
+        vfmla_m3(17, 21, 25, 29, 0, 1, 2, 0); vldr(29, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla_m3(6, 18, 22, 30, 0, 1, 2, 1); vldr(30, b3, 0);
+        vfmla_m3(7, 19, 23, 31, 0, 1, 2, 1); vldr(31, b3, 16);
+        vfmla_m3(16, 20, 24, 8, 0, 1, 2, 1); vldr(8, b3, 32);
+        vfmla_m3(17, 21, 25, 9, 0, 1, 2, 1); vldr(9, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla_m3(6, 18, 22, 26, 0, 1, 2, 2);
+        vfmla_m3(7, 19, 23, 27, 0, 1, 2, 2);
+        vfmla_m3(16, 20, 24, 28, 0, 1, 2, 2);
+        vfmla_m3(17, 21, 25, 29, 0, 1, 2, 2);
+
+        vfmla_m3(6, 18, 22, 30, 0, 1, 2, 3);
+        vfmla_m3(7, 19, 23, 31, 0, 1, 2, 3);
+        vfmla_m3(16, 20, 24, 8, 0, 1, 2, 3);
+        vfmla_m3(17, 21, 25, 9, 0, 1, 2, 3);
+    }
+
+    if (k >= 2) {
+        k -= 2;
+        vldr_f64_post_m3(0, 1, 2, a, a1, a2);
+        vldp(26, 27, b, 0); vldp(28, 29, b, 32);
+        b = b + (ldb << 1);
+        vldp(30, 31, b1, 0); vldp(8, 9, b1, 32);
+        b1 = b1 + (ldb << 1);
+
+        vfmla_m3(6, 18, 22, 26, 0, 1, 2, 0);
+        vfmla_m3(7, 19, 23, 27, 0, 1, 2, 0);
+        vfmla_m3(16, 20, 24, 28, 0, 1, 2, 0);
+        vfmla_m3(17, 21, 25, 29, 0, 1, 2, 0);
+        vfmla_m3(6, 18, 22, 30, 0, 1, 2, 1);
+        vfmla_m3(7, 19, 23, 31, 0, 1, 2, 1);
+        vfmla_m3(16, 20, 24, 8, 0, 1, 2, 1);
+        vfmla_m3(17, 21, 25, 9, 0, 1, 2, 1);
+    }
+
+    if (k >= 1) {
+        k -= 1;
+        vldr_f32_post_m3(0, 1, 2, a, a1, a2);
+        vldp(26, 27, b, 0); vldp(28, 29, b, 32);
+        vfmla_m3(6, 18, 22, 26, 0, 1, 2, 0);
+        vfmla_m3(7, 19, 23, 27, 0, 1, 2, 0);
+        vfmla_m3(16, 20, 24, 28, 0, 1, 2, 0);
+        vfmla_m3(17, 21, 25, 29, 0, 1, 2, 0);
+    }
+
+    float *c1 = c + ldc;
+    float *c2 = c + (ldc << 1);
+    if (c_state) {
+        vldr(0, c, 0);  vfadd(6, 6, 0); vstr(6, c, 0);
+        vldr(1, c, 16); vfadd(7, 7, 1); vstr(7, c, 16);
+        vldr(2, c, 32); vfadd(16, 16, 2); vstr(16, c, 32);
+        vldr(3, c, 48); vfadd(17, 17, 3); vstr(17, c, 48);
+        vldr(4, c1, 0); vfadd(18, 18, 4); vstr(18, c1, 0);
+        vldr(5, c1, 16);vfadd(19, 19, 5); vstr(19, c1, 16);
+        vldr(6, c1, 32);vfadd(20, 20, 6); vstr(20, c1, 32);
+        vldr(7, c1, 48);vfadd(21, 21, 7); vstr(21, c1, 48);
+        vldr(8, c2, 0); vfadd(22, 22, 8); vstr(22, c2, 0);
+        vldr(9, c2, 16);vfadd(23, 23, 9); vstr(23, c2, 16);
+        vldr(10,c2, 32);vfadd(24, 24, 10);vstr(24, c2, 32);
+        vldr(11,c2, 48);vfadd(25, 25, 11);vstr(25, c2, 48);
+    } else {
+        vstr(6, c, 0); vstr(7, c, 16); vstr(16, c, 32); vstr(17, c, 48);
+        vstr(18, c1, 0);vstr(19, c1, 16);vstr(20, c1, 32);vstr(21, c1, 48);
+        vstr(22, c2, 0);vstr(23, c2, 16);vstr(24, c2, 32);vstr(25, c2, 48);
+    }
+}
+
+static inline void micro_kernel_2x16_nn(float *a, float *b, float *c, long int lda, long int ldb, long int ldc, long int k, long int c_state)
+{
+    float *a1 = a + lda;
+    float *b1 = b + ldb;
+    float *b2 = b + (ldb << 1);
+    float *b3 = b1 + (ldb << 1);
+    vzero_m8(4, 5, 6, 7, 16, 17, 18, 19);
+    vzero_m8(20, 21, 22, 23, 24, 25, 26, 27);
+
+    if (k >= 8) {
+        k -= 8;
+        vldp_post_m2(0, 1, 2, 3, a, a1);
+        vldp(28, 29, b, 0); vldp(30, 31, b, 32);
+        b = b + (ldb << 2);
+        vldp(8, 9, b1, 0); vldp(10, 11, b1, 32);
+        b1 = b1 + (ldb << 2);
+        while (k >= 8) {
+            k -= 8;
+            vfmla_m2(4, 16, 28, 0, 1, 0); vldr(28, b2, 0);
+            vfmla_m2(5, 17, 29, 0, 1, 0); vldr(29, b2, 16);
+            vfmla_m2(6, 18, 30, 0, 1, 0); vldr(30, b2, 32);
+            vfmla_m2(7, 19, 31, 0, 1, 0); vldr(31, b2, 48);
+            b2 = b2 + (ldb << 2);
+
+            vfmla_m2(20, 24, 8, 0, 1, 1); vldr(8, b3, 0);
+            vfmla_m2(21, 25, 9, 0, 1, 1); vldr(9, b3, 16);
+            vfmla_m2(22, 26, 10, 0, 1, 1); vldr(10, b3, 32);
+            vfmla_m2(23, 27, 11, 0, 1, 1); vldr(11, b3, 48);
+            b3 = b3 + (ldb << 2);
+
+            vfmla_m2(4, 16, 28, 0, 1, 2); vldr(28, b, 0);
+            vfmla_m2(5, 17, 29, 0, 1, 2); vldr(29, b, 16);
+            vfmla_m2(6, 18, 30, 0, 1, 2); vldr(30, b, 32);
+            vfmla_m2(7, 19, 31, 0, 1, 2); vldr(31, b, 48);
+            b = b + (ldb << 2);
+
+            vfmla_m2(20, 24, 8, 0, 1, 3); vldr(8, b1, 0);
+            vfmla_m2(21, 25, 9, 0, 1, 3); vldr(9, b1, 16);
+            vfmla_m2(22, 26, 10, 0, 1, 3); vldr(10, b1, 32);
+            vfmla_m2(23, 27, 11, 0, 1, 3);
+            vldr_post(0, a); vldr_post(1, a1);
+            vldr(11, b1, 48);
+            b1 = b1 + (ldb << 2);
+
+            vfmla_m2(4, 16, 28, 2, 3, 0); vldr(28, b2, 0);
+            vfmla_m2(5, 17, 29, 2, 3, 0); vldr(29, b2, 16);
+            vfmla_m2(6, 18, 30, 2, 3, 0); vldr(30, b2, 32);
+            vfmla_m2(7, 19, 31, 2, 3, 0); vldr(31, b2, 48);
+            b2 = b2 + (ldb << 2);
+
+            vfmla_m2(20, 24, 8, 2, 3, 1); vldr(8, b3, 0);
+            vfmla_m2(21, 25, 9, 2, 3, 1); vldr(9, b3, 16);
+            vfmla_m2(22, 26, 10, 2, 3, 1); vldr(10, b3, 32);
+            vfmla_m2(23, 27, 11, 2, 3, 1); vldr(11, b3, 48);
+            b3 = b3 + (ldb << 2);
+
+            vfmla_m2(4, 16, 28, 2, 3, 2); vldr(28, b, 0);
+            vfmla_m2(5, 17, 29, 2, 3, 2); vldr(29, b, 16);
+            vfmla_m2(6, 18, 30, 2, 3, 2); vldr(30, b, 32);
+            vfmla_m2(7, 19, 31, 2, 3, 2); vldr(31, b, 48);
+            b = b + (ldb << 2);
+
+            vfmla_m2(20, 24, 8, 2, 3, 3); vldr(8, b1, 0);
+            vfmla_m2(21, 25, 9, 2, 3, 3); vldr(9, b1, 16);
+            vfmla_m2(22, 26, 10, 2, 3, 3); vldr(10, b1, 32);
+            vfmla_m2(23, 27, 11, 2, 3, 3);
+            vldr_post(2, a); vldr_post(3, a1);
+            vldr(11, b1, 48);
+            b1 = b1 + (ldb << 2);
+        }
+        vfmla_m2(4, 16, 28, 0, 1, 0); vldr(28, b2, 0);
+        vfmla_m2(5, 17, 29, 0, 1, 0); vldr(29, b2, 16);
+        vfmla_m2(6, 18, 30, 0, 1, 0); vldr(30, b2, 32);
+        vfmla_m2(7, 19, 31, 0, 1, 0); vldr(31, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla_m2(20, 24, 8, 0, 1, 1); vldr(8, b3, 0);
+        vfmla_m2(21, 25, 9, 0, 1, 1); vldr(9, b3, 16);
+        vfmla_m2(22, 26, 10, 0, 1, 1); vldr(10, b3, 32);
+        vfmla_m2(23, 27, 11, 0, 1, 1); vldr(11, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla_m2(4, 16, 28, 0, 1, 2); vldr(28, b, 0);
+        vfmla_m2(5, 17, 29, 0, 1, 2); vldr(29, b, 16);
+        vfmla_m2(6, 18, 30, 0, 1, 2); vldr(30, b, 32);
+        vfmla_m2(7, 19, 31, 0, 1, 2); vldr(31, b, 48);
+        b = b + (ldb << 2);
+
+        vfmla_m2(20, 24, 8, 0, 1, 3); vldr(8, b1, 0);
+        vfmla_m2(21, 25, 9, 0, 1, 3); vldr(9, b1, 16);
+        vfmla_m2(22, 26, 10, 0, 1, 3); vldr(10, b1, 32);
+        vfmla_m2(23, 27, 11, 0, 1, 3); vldr(11, b1, 48);
+        b1 = b1 + (ldb << 2);
+
+        vfmla_m2(4, 16, 28, 2, 3, 0); vldr(28, b2, 0);
+        vfmla_m2(5, 17, 29, 2, 3, 0); vldr(29, b2, 16);
+        vfmla_m2(6, 18, 30, 2, 3, 0); vldr(30, b2, 32);
+        vfmla_m2(7, 19, 31, 2, 3, 0); vldr(31, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla_m2(20, 24, 8, 2, 3, 1); vldr(8, b3, 0);
+        vfmla_m2(21, 25, 9, 2, 3, 1); vldr(9, b3, 16);
+        vfmla_m2(22, 26, 10, 2, 3, 1); vldr(10, b3, 32);
+        vfmla_m2(23, 27, 11, 2, 3, 1); vldr(11, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla_m2(4, 16, 28, 2, 3, 2);
+        vfmla_m2(5, 17, 29, 2, 3, 2);
+        vfmla_m2(6, 18, 30, 2, 3, 2);
+        vfmla_m2(7, 19, 31, 2, 3, 2);
+
+        vfmla_m2(20, 24, 8, 2, 3, 3);
+        vfmla_m2(21, 25, 9, 2, 3, 3);
+        vfmla_m2(22, 26, 10, 2, 3, 3);
+        vfmla_m2(23, 27, 11, 2, 3, 3);
+    }
+
+    if (k >= 4) {
+        k -= 4;
+        vldr_post_m2(0, 1, a, a1);
+        vldp(28, 29, b, 0); vldp(30, 31, b, 32);
+        b = b + (ldb << 2);
+        vldp(8, 9, b1, 0); vldp(10, 11, b1, 32);
+        b1 = b1 + (ldb << 2);
+
+        vfmla_m2(4, 16, 28, 0, 1, 0); vldr(28, b2, 0);
+        vfmla_m2(5, 17, 29, 0, 1, 0); vldr(29, b2, 16);
+        vfmla_m2(6, 18, 30, 0, 1, 0); vldr(30, b2, 32);
+        vfmla_m2(7, 19, 31, 0, 1, 0); vldr(31, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla_m2(20, 24, 8, 0, 1, 1); vldr(8, b3, 0);
+        vfmla_m2(21, 25, 9, 0, 1, 1); vldr(9, b3, 16);
+        vfmla_m2(22, 26, 10, 0, 1, 1); vldr(10, b3, 32);
+        vfmla_m2(23, 27, 11, 0, 1, 1); vldr(11, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla_m2(4, 16, 28, 0, 1, 2);
+        vfmla_m2(5, 17, 29, 0, 1, 2);
+        vfmla_m2(6, 18, 30, 0, 1, 2);
+        vfmla_m2(7, 19, 31, 0, 1, 2);
+
+        vfmla_m2(20, 24, 8, 0, 1, 3);
+        vfmla_m2(21, 25, 9, 0, 1, 3);
+        vfmla_m2(22, 26, 10, 0, 1, 3);
+        vfmla_m2(23, 27, 11, 0, 1, 3);
+    }
+
+    if (k >= 2) {
+        k -= 2;
+        vldr_f64_post_m2(0, 1, a, a1);
+        vldp(28, 29, b, 0); vldp(30, 31, b, 32);
+        b = b + (ldb << 1);
+        vldp(8, 9, b1, 0); vldp(10, 11, b1, 32);
+        b1 = b1 + (ldb << 1);
+
+        vfmla_m2(4, 16, 28, 0, 1, 0); vfmla_m2(5, 17, 29, 0, 1, 0);
+        vfmla_m2(6, 18, 30, 0, 1, 0); vfmla_m2(7, 19, 31, 0, 1, 0);
+        vfmla_m2(20, 24, 8, 0, 1, 1); vfmla_m2(21, 25, 9, 0, 1, 1);
+        vfmla_m2(22, 26, 10, 0, 1, 1); vfmla_m2(23, 27, 11, 0, 1, 1);
+    }
+
+    if (k >= 1) {
+        k -= 1;
+        vldr_f32_post_m2(0, 1, a, a1);
+        vldp(28, 29, b, 0); vldp(30, 31, b, 32);
+        vfmla_m2(4, 16, 28, 0, 1, 0); vfmla_m2(5, 17, 29, 0, 1, 0);
+        vfmla_m2(6, 18, 30, 0, 1, 0); vfmla_m2(7, 19, 31, 0, 1, 0);
+    }
+
+    float *c1 = c + ldc;
+    // Sum Set B (v20-v27) into Set A (v4-v7, v16-v19)
+    vfadd(4, 4, 20); vfadd(5, 5, 21); vfadd(6, 6, 22); vfadd(7, 7, 23);
+    vfadd(16, 16, 24); vfadd(17, 17, 25); vfadd(18, 18, 26); vfadd(19, 19, 27);
+    if (c_state) {
+        vldr(0, c, 0);  vfadd(4, 4, 0); vstr(4, c, 0);
+        vldr(1, c, 16); vfadd(5, 5, 1); vstr(5, c, 16);
+        vldr(2, c, 32); vfadd(6, 6, 2); vstr(6, c, 32);
+        vldr(3, c, 48); vfadd(7, 7, 3); vstr(7, c, 48);
+        vldr(4, c1, 0); vfadd(16, 16, 4); vstr(16, c1, 0);
+        vldr(5, c1, 16);vfadd(17, 17, 5); vstr(17, c1, 16);
+        vldr(6, c1, 32);vfadd(18, 18, 6); vstr(18, c1, 32);
+        vldr(7, c1, 48);vfadd(19, 19, 7); vstr(19, c1, 48);
+    } else {
+        vstr(4, c, 0); vstr(5, c, 16); vstr(6, c, 32); vstr(7, c, 48);
+        vstr(16, c1, 0);vstr(17, c1, 16);vstr(18, c1, 32);vstr(19, c1, 48);
+    }
+}
+
+static inline void micro_kernel_1x16_nn(float *a, float *b, float *c, long int lda, long int ldb, long int ldc, long int k, long int c_state)
+{
+    (void)lda; (void)ldc;
+    float *b1 = b + ldb;
+    float *b2 = b + (ldb << 1);
+    float *b3 = b1 + (ldb << 1);
+    vzero_m8(2, 3, 4, 5, 6, 7, 16, 17);
+    vzero_m8(18, 19, 20, 21, 22, 23, 24, 25);
+
+    if (k >= 8) {
+        k -= 8;
+        vldp_post(0, 1, a);
+        vldp(26, 27, b, 0); vldp(28, 29, b, 32);
+        b = b + (ldb << 2);
+        vldp(30, 31, b1, 0); vldp(8, 9, b1, 32);
+        b1 = b1 + (ldb << 2);
+        while (k >= 8) {
+            k -= 8;
+            // Lane 0: Set A (v2-v5), vn=26~29 from b2
+            vfmla(2, 26, 0, 0); vldr(26, b2, 0);
+            vfmla(3, 27, 0, 0); vldr(27, b2, 16);
+            vfmla(4, 28, 0, 0); vldr(28, b2, 32);
+            vfmla(5, 29, 0, 0); vldr(29, b2, 48);
+            b2 = b2 + (ldb << 2);
+            // Lane 1: Set B (v16-v19), vn=30,31,8,9 from b3
+            vfmla(6, 30, 0, 1); vldr(30, b3, 0);
+            vfmla(7, 31, 0, 1); vldr(31, b3, 16);
+            vfmla(16, 8, 0, 1); vldr(8, b3, 32);
+            vfmla(17, 9, 0, 1); vldr(9, b3, 48);
+            b3 = b3 + (ldb << 2);
+            // Lane 2: Set C (v20-v23), vn=26~29 from b
+            vfmla(18, 26, 0, 2); vldr(26, b, 0);
+            vfmla(19, 27, 0, 2); vldr(27, b, 16);
+            vfmla(20, 28, 0, 2); vldr(28, b, 32);
+            vfmla(21, 29, 0, 2); vldr(29, b, 48);
+            b = b + (ldb << 2);
+            // Lane 3: Set D (v6,v7,v24,v25), vn=30,31,8,9 from b1
+            vfmla(22, 30, 0, 3); vldr(30, b1, 0);
+            vfmla(23, 31, 0, 3); vldr(31, b1, 16);
+            vfmla(24, 8, 0, 3); vldr(8, b1, 32);
+            vfmla(25, 9, 0, 3);
+            vldr_post(0, a);
+            vldr(9, b1, 48);
+            b1 = b1 + (ldb << 2);
+            // Second half: A elements 4-7 from v1
+            // Lane 0: Set A (v2-v5), vn=26~29 from b2
+            vfmla(2, 26, 1, 0); vldr(26, b2, 0);
+            vfmla(3, 27, 1, 0); vldr(27, b2, 16);
+            vfmla(4, 28, 1, 0); vldr(28, b2, 32);
+            vfmla(5, 29, 1, 0); vldr(29, b2, 48);
+            b2 = b2 + (ldb << 2);
+            // Lane 1: Set B (v6,v7,v16,v17), vn=30,31,8,9 from b3
+            vfmla(6, 30, 1, 1); vldr(30, b3, 0);
+            vfmla(7, 31, 1, 1); vldr(31, b3, 16);
+            vfmla(16, 8, 1, 1); vldr(8, b3, 32);
+            vfmla(17, 9, 1, 1); vldr(9, b3, 48);
+            b3 = b3 + (ldb << 2);
+            // Lane 2: Set C (v18-v21), vn=26~29 from b
+            vfmla(18, 26, 1, 2); vldr(26, b, 0);
+            vfmla(19, 27, 1, 2); vldr(27, b, 16);
+            vfmla(20, 28, 1, 2); vldr(28, b, 32);
+            vfmla(21, 29, 1, 2); vldr(29, b, 48);
+            b = b + (ldb << 2);
+            // Lane 3: Set D (v22-v25), vn=30,31,8,9 from b1
+            vfmla(22, 30, 1, 3); vldr(30, b1, 0);
+            vfmla(23, 31, 1, 3); vldr(31, b1, 16);
+            vfmla(24, 8, 1, 3); vldr(8, b1, 32);
+            vfmla(25, 9, 1, 3);
+            vldr_post(1, a);
+            vldr(9, b1, 48);
+            b1 = b1 + (ldb << 2);
+        }
+        // Epilogue Set 1 (matches first half)
+        vfmla(2, 26, 0, 0); vldr(26, b2, 0);
+        vfmla(3, 27, 0, 0); vldr(27, b2, 16);
+        vfmla(4, 28, 0, 0); vldr(28, b2, 32);
+        vfmla(5, 29, 0, 0); vldr(29, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla(6, 30, 0, 1); vldr(30, b3, 0);
+        vfmla(7, 31, 0, 1); vldr(31, b3, 16);
+        vfmla(16, 8, 0, 1); vldr(8, b3, 32);
+        vfmla(17, 9, 0, 1); vldr(9, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla(18, 26, 0, 2); vldr(26, b, 0);
+        vfmla(19, 27, 0, 2); vldr(27, b, 16);
+        vfmla(20, 28, 0, 2); vldr(28, b, 32);
+        vfmla(21, 29, 0, 2); vldr(29, b, 48);
+        b = b + (ldb << 2);
+
+        vfmla(22, 30, 0, 3); vldr(30, b1, 0);
+        vfmla(23, 31, 0, 3); vldr(31, b1, 16);
+        vfmla(24, 8, 0, 3); vldr(8, b1, 32);
+        vfmla(25, 9, 0, 3); vldr(9, b1, 48);
+        b1 = b1 + (ldb << 2);
+        // Epilogue Set 2
+        vfmla(2, 26, 1, 0); vldr(26, b2, 0);
+        vfmla(3, 27, 1, 0); vldr(27, b2, 16);
+        vfmla(4, 28, 1, 0); vldr(28, b2, 32);
+        vfmla(5, 29, 1, 0); vldr(29, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla(6, 30, 1, 1); vldr(30, b3, 0);
+        vfmla(7, 31, 1, 1); vldr(31, b3, 16);
+        vfmla(16, 8, 1, 1); vldr(8, b3, 32);
+        vfmla(17, 9, 1, 1); vldr(9, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla(18, 26, 1, 2);
+        vfmla(19, 27, 1, 2);
+        vfmla(20, 28, 1, 2);
+        vfmla(21, 29, 1, 2);
+
+        vfmla(22, 30, 1, 3);
+        vfmla(23, 31, 1, 3);
+        vfmla(24, 8, 1, 3);
+        vfmla(25, 9, 1, 3);
+    }
+
+    if (k >= 4) {
+        k -= 4;
+        vldr_post(0, a);
+        vldp(26, 27, b, 0); vldp(28, 29, b, 32);
+        b = b + (ldb << 2);
+        vldp(30, 31, b1, 0); vldp(8, 9, b1, 32);
+        b1 = b1 + (ldb << 2);
+
+        vfmla(2, 26, 0, 0); vldr(26, b2, 0);
+        vfmla(3, 27, 0, 0); vldr(27, b2, 16);
+        vfmla(4, 28, 0, 0); vldr(28, b2, 32);
+        vfmla(5, 29, 0, 0); vldr(29, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla(6, 30, 0, 1); vldr(30, b3, 0);
+        vfmla(7, 31, 0, 1); vldr(31, b3, 16);
+        vfmla(16, 8, 0, 1); vldr(8, b3, 32);
+        vfmla(17, 9, 0, 1); vldr(9, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla(18, 26, 0, 2);
+        vfmla(19, 27, 0, 2);
+        vfmla(20, 28, 0, 2);
+        vfmla(21, 29, 0, 2);
+
+        vfmla(22, 30, 0, 3);
+        vfmla(23, 31, 0, 3);
+        vfmla(24, 8, 0, 3);
+        vfmla(25, 9, 0, 3);
+    }
+
+    if (k >= 2) {
+        k -= 2;
+        vldr_f64_post(0, a);
+        vldp(26, 27, b, 0); vldp(28, 29, b, 32);
+        b = b + (ldb << 1);
+        vldp(30, 31, b1, 0); vldp(8, 9, b1, 32);
+        b1 = b1 + (ldb << 1);
+
+        vfmla(2, 26, 0, 0); vfmla(3, 27, 0, 0);
+        vfmla(4, 28, 0, 0); vfmla(5, 29, 0, 0);
+        vfmla(6, 30, 0, 1); vfmla(7, 31, 0, 1);
+        vfmla(16, 8, 0, 1); vfmla(17, 9, 0, 1);
+    }
+
+    if (k >= 1) {
+        k -= 1;
+        vldr_f32_post(0, a);
+        vldp(26, 27, b, 0); vldp(28, 29, b, 32);
+        vfmla(2, 26, 0, 0); vfmla(3, 27, 0, 0);
+        vfmla(4, 28, 0, 0); vfmla(5, 29, 0, 0);
+    }
+
+    vfadd(2, 2, 6);  vfadd(3, 3, 7);  vfadd(4, 4, 16); vfadd(5, 5, 17);
+    vfadd(2, 2, 18); vfadd(3, 3, 19); vfadd(4, 4, 20); vfadd(5, 5, 21);
+    vfadd(2, 2, 22); vfadd(3, 3, 23); vfadd(4, 4, 24); vfadd(5, 5, 25);
+    if (c_state) {
+        vldr(0, c, 0);  vfadd(2, 2, 0); vstr(2, c, 0);
+        vldr(1, c, 16); vfadd(3, 3, 1); vstr(3, c, 16);
+        vldr(8, c, 32); vfadd(4, 4, 8); vstr(4, c, 32);
+        vldr(9, c, 48); vfadd(5, 5, 9); vstr(5, c, 48);
+    } else {
+        vstr(2, c, 0); vstr(3, c, 16); vstr(4, c, 32); vstr(5, c, 48);
+    }
+}
+
+static inline void micro_kernel_8x8_nn(float *a, float *b, float *c, long int lda, long int ldb, long int ldc, long int k, long int c_state)
+{
+    float *a0 = a;
+    float *a1 = a + lda, *a2 = a + (lda << 1), *a3 = a + lda + (lda << 1);
+    float *a4 = a + (lda << 2), *a5 = a + lda + (lda << 2);
+    float *a6 = a + (lda << 1) + (lda << 2), *a7 = a + lda + (lda << 1) + (lda << 2);
+    vzero_m8(0, 1, 2, 3, 4, 5, 6, 7);
+    vzero_m8(8, 9, 10, 11, 12, 13, 14, 15);
+
+    while (k >= 2) {
+        k -= 2;
+        vldr(16, b, 0); vldr(17, b, 16);
+        b += ldb;
+        vldr(18, b, 0); vldr(19, b, 16);
+        b += ldb;
+
+        vldr_f64_post(20, a0);
+        vfmla(0, 16, 20, 0); vfmla(0, 18, 20, 1);
+        vfmla(1, 17, 20, 0); vfmla(1, 19, 20, 1);
+
+        vldr_f64_post(21, a1);
+        vfmla(2, 16, 21, 0); vfmla(2, 18, 21, 1);
+        vfmla(3, 17, 21, 0); vfmla(3, 19, 21, 1);
+
+        vldr_f64_post(22, a2);
+        vfmla(4, 16, 22, 0); vfmla(4, 18, 22, 1);
+        vfmla(5, 17, 22, 0); vfmla(5, 19, 22, 1);
+
+        vldr_f64_post(23, a3);
+        vfmla(6, 16, 23, 0); vfmla(6, 18, 23, 1);
+        vfmla(7, 17, 23, 0); vfmla(7, 19, 23, 1);
+
+        vldr_f64_post(20, a4);
+        vfmla(8, 16, 20, 0); vfmla(8, 18, 20, 1);
+        vfmla(9, 17, 20, 0); vfmla(9, 19, 20, 1);
+
+        vldr_f64_post(21, a5);
+        vfmla(10, 16, 21, 0); vfmla(10, 18, 21, 1);
+        vfmla(11, 17, 21, 0); vfmla(11, 19, 21, 1);
+
+        vldr_f64_post(22, a6);
+        vfmla(12, 16, 22, 0); vfmla(12, 18, 22, 1);
+        vfmla(13, 17, 22, 0); vfmla(13, 19, 22, 1);
+
+        vldr_f64_post(23, a7);
+        vfmla(14, 16, 23, 0); vfmla(14, 18, 23, 1);
+        vfmla(15, 17, 23, 0); vfmla(15, 19, 23, 1);
+    }
+
+    if (k >= 1) {
+        k -= 1;
+        vldr(16, b, 0); vldr(17, b, 16);
+
+        vldr_f32_post(20, a0);
+        vfmla(0, 16, 20, 0); vfmla(1, 17, 20, 0);
+        vldr_f32_post(21, a1);
+        vfmla(2, 16, 21, 0); vfmla(3, 17, 21, 0);
+        vldr_f32_post(22, a2);
+        vfmla(4, 16, 22, 0); vfmla(5, 17, 22, 0);
+        vldr_f32_post(23, a3);
+        vfmla(6, 16, 23, 0); vfmla(7, 17, 23, 0);
+        vldr_f32_post(20, a4);
+        vfmla(8, 16, 20, 0); vfmla(9, 17, 20, 0);
+        vldr_f32_post(21, a5);
+        vfmla(10, 16, 21, 0); vfmla(11, 17, 21, 0);
+        vldr_f32_post(22, a6);
+        vfmla(12, 16, 22, 0); vfmla(13, 17, 22, 0);
+        vldr_f32_post(23, a7);
+        vfmla(14, 16, 23, 0); vfmla(15, 17, 23, 0);
+    }
+
+    float *c1 = c + ldc, *c2 = c + (ldc << 1), *c3 = c + ldc + (ldc << 1);
+    float *c4 = c + (ldc << 2), *c5 = c + ldc + (ldc << 2);
+    float *c6 = c + (ldc << 1) + (ldc << 2), *c7 = c + ldc + (ldc << 1) + (ldc << 2);
+    if (c_state) {
+        vldr(16, c, 0);  vfadd(0, 0, 16); vstr(0, c, 0);
+        vldr(17, c, 16); vfadd(1, 1, 17); vstr(1, c, 16);
+        vldr(18, c1, 0); vfadd(2, 2, 18); vstr(2, c1, 0);
+        vldr(19, c1, 16);vfadd(3, 3, 19); vstr(3, c1, 16);
+        vldr(20, c2, 0); vfadd(4, 4, 20); vstr(4, c2, 0);
+        vldr(21, c2, 16);vfadd(5, 5, 21); vstr(5, c2, 16);
+        vldr(22, c3, 0); vfadd(6, 6, 22); vstr(6, c3, 0);
+        vldr(23, c3, 16);vfadd(7, 7, 23); vstr(7, c3, 16);
+        vldr(24, c4, 0); vfadd(8, 8, 24); vstr(8, c4, 0);
+        vldr(25, c4, 16);vfadd(9, 9, 25); vstr(9, c4, 16);
+        vldr(26, c5, 0); vfadd(10, 10, 26);vstr(10, c5, 0);
+        vldr(27, c5, 16);vfadd(11, 11, 27);vstr(11, c5, 16);
+        vldr(28, c6, 0); vfadd(12, 12, 28);vstr(12, c6, 0);
+        vldr(29, c6, 16);vfadd(13, 13, 29);vstr(13, c6, 16);
+        vldr(30, c7, 0); vfadd(14, 14, 30);vstr(14, c7, 0);
+        vldr(31, c7, 16);vfadd(15, 15, 31);vstr(15, c7, 16);
+    } else {
+        vstr(0, c, 0); vstr(1, c, 16);
+        vstr(2, c1, 0);vstr(3, c1, 16);
+        vstr(4, c2, 0);vstr(5, c2, 16);
+        vstr(6, c3, 0);vstr(7, c3, 16);
+        vstr(8, c4, 0);vstr(9, c4, 16);
+        vstr(10, c5, 0);vstr(11, c5, 16);
+        vstr(12, c6, 0);vstr(13, c6, 16);
+        vstr(14, c7, 0);vstr(15, c7, 16);
+    }
+}
+
 #endif  // KGEMM_NEON_KERNEL_H
