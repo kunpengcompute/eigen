@@ -1,0 +1,47 @@
+# benchmark=comprehensive_tensor_contraction
+# compiler=Clang 17.0.6 ( 17.0.6-57.oe2403sp3)
+# vector_backend=NEON
+# vector_bits=128
+# packet_floats=4
+# gebp_mr=12
+# gebp_nr=4
+# sve2_optimized_gebp=0
+# kgemm_tensor_kernel=1
+# kgemm_tensor_kernel_policy=canonical_contiguous_fp32_default_or_threadpool
+# kgemm_tensor_kernel_expected=1
+# kgemm_pack_reuse=1
+# kgemm_test_instrumentation=0
+# kgemm_pack_reuse_min_mn=768
+# kgemm_pack_reuse_min_k=512
+# dedicated_small_gemm=0
+# tuple_order=m,k,n
+# max_align_bytes=64
+# tensor_device=ThreadPoolDevice
+# eigen_threads=1
+# tensor_threads=4
+# threads=4
+# layout=row
+# effective_gemm_mapping=external(m,k,n)->internal(n,k,m)
+# gemv_condition=external_m==1
+# mode=C=A*B
+# cpeqab_semantics=tensor_expression_not_fused_beta1_gemm
+# input_pattern=deterministic_normal_v2
+# initial_c=deterministic_nonzero
+# checksum_scope=one_operation_same_inputs
+# cache_state=warm_steady_state
+# warmup_operations_per_sample=1
+# output_reset=before_warmup_outside_timing
+# timed_loop_wrapper=noinline
+# contraction_call=always_inline
+# runtime_mode_branch_in_timed_loop=0
+# tensor_scope=owning_contiguous_alpha1
+# samples=7
+# min_time_ms=250
+# max_spread_pct=0
+# csv=/tmp/eigen_dev340_perf_20260812/dev34_recheck_plan.csv
+# group=all
+group,m,k,n,iterations,median_gflops,min_gflops,max_gflops,checksum,spread_pct,kernel_path
+csv,3,3,3,2891058,0.625296,0.623653,0.626060,-0.982253,0.384875,kgemm_raw
+csv,59,128,64,17156,66.576398,66.167455,66.696405,-343.252658,0.794500,kgemm_raw
+csv,50,250,100,5877,58.812204,58.530789,58.955834,100.279406,0.722714,kgemm_raw
+csv,192,192,192,2169,122.457550,122.187274,122.564867,-55.482839,0.308346,kgemm_raw
