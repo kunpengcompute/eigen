@@ -806,3 +806,312 @@ void fillDeterministic(Tensor2D& tensor, int rows, int cols, std::uint64_t seed)
   }
 }
 
+template <int Layout>
+Eigen::Index tensorOffset(Eigen::Index row, Eigen::Index col, Eigen::Index rows, Eigen::Index cols) {
+  return Layout == Eigen::RowMajor ? row * cols + col : row + col * rows;
+}
+
+EIGEN_STRONG_INLINE void compilerMemoryBarrier(const void* pointer) {
+#if defined(__GNUC__) || defined(__clang__)
+  __asm__ __volatile__("" : : "g"(pointer) : "memory");
+#else
+  EIGEN_UNUSED_VARIABLE(pointer);
+#endif
+}
+
+template <int Layout, typename Device, bool Accumulate>
+class ContractionBenchmark {
+ public:
+  using Tensor2D = Eigen::Tensor<float, 2, Layout>;
+
+  ContractionBenchmark(int m, int k, int n, const Device& device)
+      : m_(m),
+        n_(n),
+        device_(device),
+        a_(m, k),
+        b_(k, n),
+        c_(m, n),
+        initial_c_(static_cast<std::size_t>(m) * static_cast<std::size_t>(n)) {
+    dims_[0] = Eigen::IndexPair<int>(1, 0);
+    fillDeterministic(a_, m, k, kSeedA);
+    fillDeterministic(b_, k, n, kSeedB);
+    fillDeterministic(c_, m, n, kSeedC);
+    std::copy(c_.data(), c_.data() + initial_c_.size(), initial_c_.begin());
+  }
+
+  EIGEN_DONT_INLINE double run(std::int64_t iters) {
+    resetOutput();
+    execute();  // Warm the same tensors and code path used by the timed loop.
+
+    // Preserve the cache and worker-thread state produced by the warm-up.  A
+    // second host-side copy of C here would evict parts of A/B for large
+    // problems and pull output cache lines back to the caller thread.  C=A*B
+    // overwrites this value; C+=A*B remains the same operation with one
+    // untimed accumulation already applied.
+
+    const auto start = Clock::now();
+    for (std::int64_t i = 0; i < iters; ++i) {
+      execute();
+      compilerMemoryBarrier(c_.data());
+    }
+    const auto stop = Clock::now();
+    benchmark_sink += c_(0, 0);
+    return std::chrono::duration<double>(stop - start).count();
+  }
+
+  double oneOperationChecksum() {
+    resetOutput();
+    execute();
+    double checksum = 0.0;
+    const Eigen::Index count = static_cast<Eigen::Index>(m_) * static_cast<Eigen::Index>(n_);
+    for (Eigen::Index i = 0; i < count; ++i) checksum += static_cast<double>(c_.data()[i]);
+    benchmark_sink += c_(0, 0);
+    return checksum;
+  }
+
+ private:
+  void resetOutput() { std::copy(initial_c_.begin(), initial_c_.end(), c_.data()); }
+
+  EIGEN_ALWAYS_INLINE void executeImpl(std::true_type) {
+    c_.device(device_) += a_.contract(b_, dims_);
+  }
+
+  EIGEN_ALWAYS_INLINE void executeImpl(std::false_type) {
+    c_.device(device_) = a_.contract(b_, dims_);
+  }
+
+  EIGEN_ALWAYS_INLINE void execute() {
+    executeImpl(std::integral_constant<bool, Accumulate>{});
+  }
+
+  int m_;
+  int n_;
+  const Device& device_;
+  Tensor2D a_;
+  Tensor2D b_;
+  Tensor2D c_;
+  std::vector<float> initial_c_;
+  Eigen::array<Eigen::IndexPair<int>, 1> dims_;
+};
+
+// Calibrate: find number of iterations needed to reach min_time.
+template <typename Runner>
+std::int64_t calibrateIters(Runner& runner, double min_time) {
+  const double calib_time = std::min(0.05, min_time / 4.0);
+  const std::int64_t max_iters = std::numeric_limits<std::int32_t>::max();
+  std::int64_t iters = 1;
+  double elapsed = runner.run(iters);
+
+  while (elapsed < calib_time && iters <= max_iters / 2) {
+    iters *= 2;
+    elapsed = runner.run(iters);
+  }
+
+  if (!std::isfinite(elapsed) || elapsed <= 0.0) return iters;
+  const double scale = min_time / elapsed;
+  const double scaled = std::ceil(static_cast<double>(iters) * scale);
+  if (!std::isfinite(scaled) || scaled >= static_cast<double>(max_iters)) return max_iters;
+  return std::max<std::int64_t>(1, static_cast<std::int64_t>(scaled));
+}
+
+// =========================================================================
+// Correctness verification
+// =========================================================================
+
+float exactBValue(Eigen::Index row, Eigen::Index col) {
+  const std::uint64_t mixed = static_cast<std::uint64_t>(row) * UINT64_C(17) +
+                              static_cast<std::uint64_t>(col) * UINT64_C(13);
+  return static_cast<float>(static_cast<int>(mixed % UINT64_C(7)) - 3);
+}
+
+float exactCValue(Eigen::Index row, Eigen::Index col) {
+  const std::uint64_t mixed = static_cast<std::uint64_t>(row) * UINT64_C(5) +
+                              static_cast<std::uint64_t>(col) * UINT64_C(11);
+  return static_cast<float>(static_cast<int>(mixed % UINT64_C(5)) - 2);
+}
+
+template <typename Tensor2D>
+void fillExactOneHotInputs(Tensor2D& a, Tensor2D& b, Tensor2D& c,
+                           int m, int k, int n) {
+  a.setZero();
+  for (Eigen::Index row = 0; row < m; ++row) {
+    const Eigen::Index pivot =
+        (row * static_cast<Eigen::Index>(131) + 7) % k;
+    a(row, pivot) = 1.0f;
+  }
+  for (Eigen::Index row = 0; row < k; ++row) {
+    for (Eigen::Index col = 0; col < n; ++col) {
+      b(row, col) = exactBValue(row, col);
+    }
+  }
+  for (Eigen::Index row = 0; row < m; ++row) {
+    for (Eigen::Index col = 0; col < n; ++col) {
+      c(row, col) = exactCValue(row, col);
+    }
+  }
+}
+
+template <int Layout, typename Device>
+bool verifyContraction(int m, int k, int n, bool accumulate, const Device& device) {
+  using Tensor2D = Eigen::Tensor<float, 2, Layout>;
+
+  Tensor2D A(m, k);
+  Tensor2D B(k, n);
+  Tensor2D C_eigen(m, n);
+
+  fillDeterministic(A, m, k, kSeedA);
+  fillDeterministic(B, k, n, kSeedB);
+  fillDeterministic(C_eigen, m, n, kSeedC);
+  const Eigen::Index output_count = static_cast<Eigen::Index>(m) * static_cast<Eigen::Index>(n);
+  std::vector<float> initial_c(C_eigen.data(), C_eigen.data() + output_count);
+
+  // Eigen contraction
+  Eigen::array<Eigen::IndexPair<int>, 1> dims = {Eigen::IndexPair<int>(1, 0)};
+  resetKgemmInvocationCounters();
+  if (accumulate) {
+    C_eigen.device(device) += A.contract(B, dims);
+  } else {
+    C_eigen.device(device) = A.contract(B, dims);
+  }
+
+  // Compare against a double-precision dot product. gamma_(2K+1) bounds the
+  // FP32 multiply/add rounding; a safety factor covers vectorized reduction
+  // order, FMA/non-FMA differences, and the separate Tensor += expression.
+  const double unit_roundoff = static_cast<double>(std::numeric_limits<float>::epsilon()) / 2.0;
+  const double gamma_argument = (2.0 * static_cast<double>(k) + 1.0) * unit_roundoff;
+  if (gamma_argument >= 1.0) {
+    std::cerr << "Cannot construct a meaningful FP32 error bound for K=" << k << "\n";
+    return false;
+  }
+  const double gamma = gamma_argument / (1.0 - gamma_argument);
+  constexpr double kErrorSafetyFactor = 8.0;
+
+  double max_rel_error = 0.0;
+  double max_abs_error = 0.0;
+  double max_bound_ratio = 0.0;
+  double sum_rel_error = 0.0;
+  std::uint64_t err_count = 0;
+  std::uint64_t nonfinite_count = 0;
+
+  for (Eigen::Index i = 0; i < m; ++i) {
+    for (Eigen::Index j = 0; j < n; ++j) {
+      const Eigen::Index c_offset = tensorOffset<Layout>(i, j, m, n);
+      const double initial = static_cast<double>(initial_c[static_cast<std::size_t>(c_offset)]);
+      double expected = accumulate ? initial : 0.0;
+      double magnitude_sum = accumulate ? std::abs(initial) : 0.0;
+      for (Eigen::Index l = 0; l < k; ++l) {
+        const Eigen::Index a_offset = tensorOffset<Layout>(i, l, m, k);
+        const Eigen::Index b_offset = tensorOffset<Layout>(l, j, k, n);
+        const double product = static_cast<double>(A.data()[a_offset]) * static_cast<double>(B.data()[b_offset]);
+        expected += product;
+        magnitude_sum += std::abs(product);
+      }
+
+      const double got = static_cast<double>(C_eigen.data()[c_offset]);
+      const bool finite = std::isfinite(expected) && std::isfinite(got);
+      const double abs_error = finite ? std::abs(expected - got) : std::numeric_limits<double>::infinity();
+      const double rel_error =
+          finite ? abs_error / std::max(1.0, std::abs(expected)) : std::numeric_limits<double>::infinity();
+      const double error_bound =
+          kErrorSafetyFactor * (gamma * magnitude_sum + unit_roundoff * std::max(1.0, std::abs(expected)));
+      const double bound_ratio =
+          finite && error_bound > 0.0 ? abs_error / error_bound : std::numeric_limits<double>::infinity();
+      const bool mismatch = !finite || !(abs_error <= error_bound);
+      if (mismatch) {
+        ++err_count;
+        if (!finite) ++nonfinite_count;
+        if (err_count <= 10) {  // print first 10 errors
+          std::cerr << "  MISMATCH at (" << i << "," << j << "): expected=" << expected << " got=" << got
+                    << " abs_err=" << abs_error << " error_bound=" << error_bound << "\n";
+        }
+      }
+      max_abs_error = std::max(max_abs_error, abs_error);
+      max_rel_error = std::max(max_rel_error, rel_error);
+      max_bound_ratio = std::max(max_bound_ratio, bound_ratio);
+      sum_rel_error += rel_error;
+    }
+  }
+
+  const double total = static_cast<double>(output_count);
+  const double avg_rel_error = sum_rel_error / total;
+
+  // A one-hot A matrix and small integral B/C values have an exactly
+  // representable result.  This catches packed-lane swaps, dropped K entries,
+  // and tail corruption that can fit inside the conservative FP error bound.
+  fillExactOneHotInputs(A, B, C_eigen, m, k, n);
+  if (accumulate) {
+    C_eigen.device(device) += A.contract(B, dims);
+  } else {
+    C_eigen.device(device) = A.contract(B, dims);
+  }
+
+  std::uint64_t exact_err_count = 0;
+  double exact_max_abs_error = 0.0;
+  for (Eigen::Index i = 0; i < m; ++i) {
+    const Eigen::Index pivot =
+        (i * static_cast<Eigen::Index>(131) + 7) % k;
+    for (Eigen::Index j = 0; j < n; ++j) {
+      const double expected = static_cast<double>(exactBValue(pivot, j)) +
+                              (accumulate ? exactCValue(i, j) : 0.0f);
+      const Eigen::Index offset = tensorOffset<Layout>(i, j, m, n);
+      const double got = static_cast<double>(C_eigen.data()[offset]);
+      const double abs_error = std::abs(expected - got);
+      exact_max_abs_error = std::max(exact_max_abs_error, abs_error);
+      if (!std::isfinite(got) || got != expected) {
+        ++exact_err_count;
+        if (exact_err_count <= 10) {
+          std::cerr << "  EXACT MISMATCH at (" << i << ',' << j
+                    << "): expected=" << expected << " got=" << got << "\n";
+        }
+      }
+    }
+  }
+
+  const Eigen::Index effective_m = Layout == Eigen::RowMajor ? n : m;
+  const Eigen::Index effective_n = Layout == Eigen::RowMajor ? m : n;
+  const bool uses_gemv = effective_n == 1;
+  const bool uses_kgemm =
+      !uses_gemv && kgemmTensorKernelEnabled() &&
+      (std::is_same<Device, Eigen::DefaultDevice>::value ||
+       std::is_same<Device, Eigen::ThreadPoolDevice>::value);
+  const bool expects_packed =
+      kgemmPackReuseExpected(m, k, n, Layout);
+  const unsigned long long raw_invocations = kgemmRawInvocationCount();
+  const unsigned long long packed_invocations = kgemmPackedInvocationCount();
+  bool path_ok = true;
+  if (kgemmInstrumentationEnabled()) {
+    if (!uses_kgemm) {
+      path_ok = raw_invocations == 0 && packed_invocations == 0;
+    } else if (expects_packed) {
+      path_ok = packed_invocations > 0 && raw_invocations == 0;
+    } else {
+      path_ok = raw_invocations > 0 && packed_invocations == 0;
+    }
+  }
+  const bool all_ok = err_count == 0 && exact_err_count == 0 && path_ok;
+  const char* implementation = uses_kgemm ? "KGEMM" : (uses_gemv ? "GEMV" : "GEBP");
+  std::cout << "  [" << (Layout == Eigen::RowMajor ? "RowMajor" : "ColMajor") << ',' << implementation
+            << ",effective=" << effective_m << 'x' << k << 'x' << effective_n << "] "
+            << (accumulate ? "C+=A*B" : "C=A*B") << " (" << m << "x" << k << "x" << n << "): "
+            << "max_abs_err=" << max_abs_error << " max_rel_err=" << max_rel_error << " avg_rel_err=" << avg_rel_error
+            << " max_bound_ratio=" << max_bound_ratio << " nonfinite=" << nonfinite_count << " mismatches=" << err_count
+            << "/" << output_count << " exact_mismatches=" << exact_err_count
+            << " exact_max_abs_err=" << exact_max_abs_error;
+  if (kgemmInstrumentationEnabled()) {
+    std::cout << " raw_invocations=" << raw_invocations
+              << " packed_invocations=" << packed_invocations
+              << " expected_path="
+              << (uses_kgemm ? (expects_packed ? "kgemm_packed" : "kgemm_raw")
+                             : (uses_gemv ? "gemv" : "gebp"))
+              << " path_check=" << (path_ok ? "PASS" : "FAIL");
+  } else {
+    std::cout << " path_check=not_instrumented";
+  }
+  std::cout << (all_ok ? "  PASS" : "  FAIL") << "\n";
+  return all_ok;
+}
+
+// =========================================================================
+// Benchmark runner (layout dispatch)
+// =========================================================================
+
