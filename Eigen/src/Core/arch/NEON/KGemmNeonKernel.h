@@ -1,0 +1,2796 @@
+#ifndef KGEMM_NEON_KERNEL_H
+#define KGEMM_NEON_KERNEL_H
+
+#if defined(__clang__)
+#define vldr(vd, addr, offset) \
+    asm volatile("ldr q" #vd ", [%0, #" #offset "]" : : "r"(addr) : "memory", "v" #vd)
+
+#define vldr_post(vd, addr) \
+    asm volatile("ldr q" #vd ", [%0], #16" : "+r"(addr) : "r"(addr) : "memory", "v" #vd)
+
+#define vldr_f64(vd, addr) \
+    asm volatile("ldr d" #vd ", [%0]" : : "r"(addr) : "memory", "v" #vd)
+
+#define vldr_f64_post(vd, addr) \
+    asm volatile("ldr d" #vd ", [%0], #8" : "+r"(addr) : "r"(addr) : "memory", "v" #vd)
+
+#define vldr_f32_post(vd, addr) \
+    asm volatile("ldr s" #vd ", [%0], #4" : "+r"(addr) : "r"(addr) : "memory", "v" #vd)
+
+#define vstr(vd, addr, offset) \
+    asm volatile("str q" #vd ", [%0, #" #offset "]" : : "r"(addr) : "memory", "v" #vd)
+
+#define vldp(vd0, vd1, addr, offset) \
+    asm volatile("ldp q" #vd0 ", q" #vd1 ", [%0, #" #offset "]" : : "r"(addr) : "memory", "v" #vd0, "v" #vd1)
+
+#define vldp_post(vd0, vd1, addr) \
+    asm volatile("ldp q" #vd0 ", q" #vd1 ", [%0], #32" : "+r"(addr) : : "memory", "v" #vd0, "v" #vd1)
+
+#elif defined(__GNUC__)
+
+#define vldr(vd, addr, offset) \
+    asm volatile("ldr q" #vd ", [\%x0, #" #offset "]" : : "r"(addr) : "memory", "v" #vd)
+
+#define vldr_post(vd, addr) \
+    asm volatile("ldr q" #vd ", [\%x0], #16" : "+r"(addr) : "r"(addr) : "memory", "v" #vd)
+
+#define vldr_f64(vd, addr) \
+    asm volatile("ldr d" #vd ", [\%x0]" : : "r"(addr) : "memory", "v" #vd)
+
+#define vldr_f64_post(vd, addr) \
+    asm volatile("ldr d" #vd ", [\%x0], #8" : "+r"(addr) : "r"(addr) : "memory", "v" #vd)
+
+#define vldr_f32_post(vd, addr) \
+    asm volatile("ldr s" #vd ", [\%x0], #4" : "+r"(addr) : "r"(addr) : "memory", "v" #vd)
+
+#define vstr(vd, addr, offset) \
+    asm volatile("str q" #vd ", [\%x0, #" #offset "]" : : "r"(addr) : "memory", "v" #vd)
+
+#define vldp(vd0, vd1, addr, offset) \
+    asm volatile("ldp q" #vd0 ", q" #vd1 ", [\%x0, #" #offset "]" : : "r"(addr) : "memory", "v" #vd0, "v" #vd1)
+
+#define vldp_post(vd0, vd1, addr) \
+    asm volatile("ldp q" #vd0 ", q" #vd1 ", [\%x0], #32" : "+r"(addr) : : "memory", "v" #vd0, "v" #vd1)
+
+#endif
+
+#define vldr_m4(vd0, vd1, vd2, vd3, addr, off0, off1, off2, off3) \
+    vldr(vd0, addr, off0); \
+    vldr(vd1, addr, off1); \
+    vldr(vd2, addr, off2); \
+    vldr(vd3, addr, off3);
+
+#define vldr_post_m2(vd0, vd1, addr0, addr1) \
+    vldr_post(vd0, addr0); \
+    vldr_post(vd1, addr1);
+
+#define vldr_post_m3(vd0, vd1, vd2, addr0, addr1, addr2) \
+    vldr_post(vd0, addr0); \
+    vldr_post(vd1, addr1); \
+    vldr_post(vd2, addr2);
+
+#define vldr_post_m4(vd0, vd1, vd2, vd3, addr0, addr1, addr2, addr3) \
+    vldr_post(vd0, addr0); \
+    vldr_post(vd1, addr1); \
+    vldr_post(vd2, addr2); \
+    vldr_post(vd3, addr3);
+
+#define vldr_f64_post_m2(vd0, vd1, addr0, addr1) \
+    vldr_f64_post(vd0, addr0); \
+    vldr_f64_post(vd1, addr1);
+
+#define vldr_f64_post_m3(vd0, vd1, vd2, addr0, addr1, addr2) \
+    vldr_f64_post(vd0, addr0); \
+    vldr_f64_post(vd1, addr1); \
+    vldr_f64_post(vd2, addr2);
+
+#define vldr_f64_post_m4(vd0, vd1, vd2, vd3, addr0, addr1, addr2, addr3) \
+    vldr_f64_post(vd0, addr0); \
+    vldr_f64_post(vd1, addr1); \
+    vldr_f64_post(vd2, addr2); \
+    vldr_f64_post(vd3, addr3);
+
+#define vldr_f32_post_m2(vd0, vd1, addr0, addr1) \
+    vldr_f32_post(vd0, addr0); \
+    vldr_f32_post(vd1, addr1);
+
+#define vldr_f32_post_m3(vd0, vd1, vd2, addr0, addr1, addr2) \
+    vldr_f32_post(vd0, addr0); \
+    vldr_f32_post(vd1, addr1); \
+    vldr_f32_post(vd2, addr2);
+
+#define vldr_f32_post_m4(vd0, vd1, vd2, vd3, addr0, addr1, addr2, addr3) \
+    vldr_f32_post(vd0, addr0); \
+    vldr_f32_post(vd1, addr1); \
+    vldr_f32_post(vd2, addr2); \
+    vldr_f32_post(vd3, addr3);
+
+#define vldp_post_m2(vd0, vd1, vn0, vn1, addr0, addr1) \
+    vldp_post(vd0, vn0, addr0); \
+    vldp_post(vd1, vn1, addr1);
+
+#define vldp_post_m3(vd0, vd1, vd2, vn0, vn1, vn2, addr0, addr1, addr2) \
+    vldp_post(vd0, vn0, addr0); \
+    vldp_post(vd1, vn1, addr1); \
+    vldp_post(vd2, vn2, addr2);
+
+#define vldp_post_m4(vd0, vd1, vd2, vd3, vn0, vn1, vn2, vn3, addr0, addr1, addr2, addr3) \
+    vldp_post(vd0, vn0, addr0); \
+    vldp_post(vd1, vn1, addr1); \
+    vldp_post(vd2, vn2, addr2); \
+    vldp_post(vd3, vn3, addr3);
+
+#define vstr_m4(vd0, vd1, vd2, vd3, addr, off0, off1, off2, off3) \
+    vstr(vd0, addr, off0); \
+    vstr(vd1, addr, off1); \
+    vstr(vd2, addr, off2); \
+    vstr(vd3, addr, off3);
+
+#define vzero(vd) \
+    asm volatile("eor v" #vd ".16b, v" #vd ".16b, v" #vd ".16b" : : : "v" #vd)
+
+#define vzero_m2(vd0, vd1) \
+    vzero(vd0); \
+    vzero(vd1);
+
+#define vzero_m4(vd0, vd1, vd2, vd3) \
+    vzero_m2(vd0, vd1); \
+    vzero_m2(vd2, vd3);
+
+#define vzero_m8(vd0, vd1, vd2, vd3, vd4, vd5, vd6, vd7) \
+    vzero_m4(vd0, vd1, vd2, vd3); \
+    vzero_m4(vd4, vd5, vd6, vd7);
+
+#define vfadd(vd, vn, vm) \
+    asm volatile("fadd v" #vd ".4s, v" #vn ".4s, v" #vm ".4s" : : : "v" #vd)
+
+#define vfadd_m4(vd0, vd1, vd2, vd3, vn0, vn1, vn2, vn3, vm0, vm1, vm2, vm3) \
+    vfadd(vd0, vn0, vm0); \
+    vfadd(vd1, vn1, vm1); \
+    vfadd(vd2, vn2, vm2); \
+    vfadd(vd3, vn3, vm3);
+
+#define vfmla(vd, vn, vm, lane) \
+    asm volatile("fmla v" #vd ".4s, v" #vn ".4s, v" #vm ".s[" #lane "]" : : : "v" #vd)
+
+#define vfmla_m2(vd0, vd1, vn, vm0, vm1, lane) \
+    vfmla(vd0, vn, vm0, lane); \
+    vfmla(vd1, vn, vm1, lane);
+
+#define vfmla_m3(vd0, vd1, vd2, vn, vm0, vm1, vm2, lane) \
+    vfmla(vd0, vn, vm0, lane); \
+    vfmla(vd1, vn, vm1, lane); \
+    vfmla(vd2, vn, vm2, lane);
+
+#define vfmla_m4(vd0, vd1, vd2, vd3, vn, vm0, vm1, vm2, vm3, lane) \
+    vfmla(vd0, vn, vm0, lane); \
+    vfmla(vd1, vn, vm1, lane); \
+    vfmla(vd2, vn, vm2, lane); \
+    vfmla(vd3, vn, vm3, lane);
+
+#define vfmla_m4_pa(vd0, vd1, vd2, vd3, vn, vm) \
+    vfmla(vd0, vn, vm, 0); \
+    vfmla(vd1, vn, vm, 1); \
+    vfmla(vd2, vn, vm, 2); \
+    vfmla(vd3, vn, vm, 3);
+
+#define vfmla_m4_n4_ldr(vd0, vd1, vd2, vd3, vn0, vn1, vn2, vn3, vm0, vm1, vm2, vm3, lane, baddr) \
+    vfmla_m4(vd0, vd1, vd2, vd3, vn0, vm0, vm1, vm2, vm3, lane); \
+    vldr(vn0, baddr, 0); \
+    vfmla_m4(vd0, vd1, vd2, vd3, vn1, vm0, vm1, vm2, vm3, lane); \
+    vldr(vn1, baddr, 16); \
+    vfmla_m4(vd0, vd1, vd2, vd3, vn2, vm0, vm1, vm2, vm3, lane); \
+    vldr(vn2, baddr, 32); \
+    vfmla_m4(vd0, vd1, vd2, vd3, vn3, vm0, vm1, vm2, vm3, lane); \
+    vldr(vn3, baddr, 48); 
+
+#define vfmla_m4_n4(vd0, vd1, vd2, vd3, vn0, vn1, vn2, vn3, vm0, vm1, vm2, vm3, lane) \
+    vfmla_m4(vd0, vd1, vd2, vd3, vn0, vm0, vm1, vm2, vm3, lane); \
+    vfmla_m4(vd0, vd1, vd2, vd3, vn1, vm0, vm1, vm2, vm3, lane); \
+    vfmla_m4(vd0, vd1, vd2, vd3, vn2, vm0, vm1, vm2, vm3, lane); \
+    vfmla_m4(vd0, vd1, vd2, vd3, vn3, vm0, vm1, vm2, vm3, lane);
+
+#define vfmul(vd, vn, vm, lane) \
+    asm volatile("fmul v" #vd ".4s, v" #vn ".4s, v" #vm ".s[" #lane "]" : : : "memory", "v" #vd)
+
+#define vfmla_vec(vd, vn, vm) \
+    asm volatile("fmla v" #vd ".4s, v" #vn ".4s, v" #vm ".4s" : : : "v" #vd)
+
+#define vhsum(vd) \
+    asm volatile("faddp v" #vd ".4s, v" #vd ".4s, v" #vd ".4s" : : : "v" #vd); \
+    asm volatile("faddp v" #vd ".4s, v" #vd ".4s, v" #vd ".4s" : : : "v" #vd)
+
+#define vst1s(vd, lane, addr) \
+    asm volatile("st1 {v" #vd ".s}[" #lane "], [%0]" : : "r"(addr) : "memory")
+
+#define vld1s(vd, lane, addr) \
+    asm volatile("ld1 {v" #vd ".s}[" #lane "], [%0]" : : "r"(addr) : "memory", "v" #vd)
+
+#define vfadd_f32(vd, vn) \
+    asm volatile("fadd s" #vd ", s" #vd ", s" #vn : : : "v" #vd)
+
+#define vzip1_4s(vd, vn, vm) \
+    asm volatile("zip1 v" #vd ".4s, v" #vn ".4s, v" #vm ".4s" : : : "v" #vd)
+
+#define vzip2_4s(vd, vn, vm) \
+    asm volatile("zip2 v" #vd ".4s, v" #vn ".4s, v" #vm ".4s" : : : "v" #vd)
+
+#define vmov_s0(vd, vs, lane) \
+    asm volatile("mov s" #vd " .s[0], v" #vs ".s[" #lane "]" : : : "v" #vd)
+
+#define vins_s1(vd, vs, lane) \
+    asm volatile("ins v" #vd ".s[1], v" #vs ".s[" #lane "]" : : : "v" #vd)
+
+
+static inline void micro_kernel_4x16_nn(float *a, float *b, float *c, long int lda, long int ldb, long int ldc, long int k, long int c_state)
+{
+    float *a1 = a + lda;
+    float *a2 = a + (lda << 1);
+    float *a3 = a1 + (lda << 1);
+    float *b1 = b + ldb;
+    float *b2 = b + (ldb << 1);
+    float *b3 = b1 + (ldb << 1);
+    vzero_m8(16, 17, 18, 19, 20, 21, 22, 23);
+    vzero_m8(24, 25, 26, 27, 28, 29, 30, 31);
+
+    if (k >= 8) {
+        k -= 8;
+        vldp_post_m4(0, 1, 2, 3, 4, 5, 6, 7, a, a1, a2, a3);
+        vldp(8, 9, b, 0); vldp(10, 11, b, 32);
+        b = b + (ldb << 2);
+        vldp(12, 13, b1, 0); vldp(14, 15, b1, 32);
+        b1 = b1 + (ldb << 2);
+        while (k >= 8) {
+            k -= 8;
+            vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 0); vldr(8, b2, 0);
+            vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 0); vldr(9, b2, 16);
+            vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 0); vldr(10, b2, 32);
+            vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 0); vldr(11, b2, 48);
+            b2 = b2 + (ldb << 2);
+
+            vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 1); vldr(12, b3, 0);
+            vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 1); vldr(13, b3, 16);
+            vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 1); vldr(14, b3, 32);
+            vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 1); vldr(15, b3, 48);
+            b3 = b3 + (ldb << 2);
+
+            vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 2); vldr(8, b, 0);
+            vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 2); vldr(9, b, 16);
+            vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 2); vldr(10, b, 32);
+            vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 2); vldr(11, b, 48);
+            b = b + (ldb << 2);
+
+            vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 3); vldr(12, b1, 0);
+            vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 3); vldr(13, b1, 16);
+            vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 3); vldr(14, b1, 32);
+            vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 3);
+            vldr_post(0, a); vldr_post(1, a1); vldr_post(2, a2); vldr_post(3, a3);
+            vldr(15, b1, 48);
+            b1 = b1 + (ldb << 2);
+
+            vfmla_m4(16, 20, 24, 28, 8, 4, 5, 6, 7, 0); vldr(8, b2, 0);
+            vfmla_m4(17, 21, 25, 29, 9, 4, 5, 6, 7, 0); vldr(9, b2, 16);
+            vfmla_m4(18, 22, 26, 30, 10, 4, 5, 6, 7, 0); vldr(10, b2, 32);
+            vfmla_m4(19, 23, 27, 31, 11, 4, 5, 6, 7, 0); vldr(11, b2, 48);
+            b2 = b2 + (ldb << 2);
+
+            vfmla_m4(16, 20, 24, 28, 12, 4, 5, 6, 7, 1); vldr(12, b3, 0);
+            vfmla_m4(17, 21, 25, 29, 13, 4, 5, 6, 7, 1); vldr(13, b3, 16);
+            vfmla_m4(18, 22, 26, 30, 14, 4, 5, 6, 7, 1); vldr(14, b3, 32);
+            vfmla_m4(19, 23, 27, 31, 15, 4, 5, 6, 7, 1); vldr(15, b3, 48);
+            b3 = b3 + (ldb << 2);
+
+            vfmla_m4(16, 20, 24, 28, 8, 4, 5, 6, 7, 2); vldr(8, b, 0);
+            vfmla_m4(17, 21, 25, 29, 9, 4, 5, 6, 7, 2); vldr(9, b, 16);
+            vfmla_m4(18, 22, 26, 30, 10, 4, 5, 6, 7, 2); vldr(10, b, 32);
+            vfmla_m4(19, 23, 27, 31, 11, 4, 5, 6, 7, 2); vldr(11, b, 48);
+            b = b + (ldb << 2);
+
+            vfmla_m4(16, 20, 24, 28, 12, 4, 5, 6, 7, 3); vldr(12, b1, 0);
+            vfmla_m4(17, 21, 25, 29, 13, 4, 5, 6, 7, 3); vldr(13, b1, 16);
+            vfmla_m4(18, 22, 26, 30, 14, 4, 5, 6, 7, 3); vldr(14, b1, 32);
+            vfmla_m4(19, 23, 27, 31, 15, 4, 5, 6, 7, 3);
+            vldr_post(4, a); vldr_post(5, a1); vldr_post(6, a2); vldr_post(7, a3);
+            vldr(15, b1, 48);
+            b1 = b1 + (ldb << 2);
+        }
+        vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 0); vldr(8, b2, 0);
+        vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 0); vldr(9, b2, 16);
+        vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 0); vldr(10, b2, 32);
+        vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 0); vldr(11, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 1); vldr(12, b3, 0);
+        vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 1); vldr(13, b3, 16);
+        vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 1); vldr(14, b3, 32);
+        vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 1); vldr(15, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 2); vldr(8, b, 0);
+        vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 2); vldr(9, b, 16);
+        vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 2); vldr(10, b, 32);
+        vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 2); vldr(11, b, 48);
+        b = b + (ldb << 2);
+
+        vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 3); vldr(12, b1, 0);
+        vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 3); vldr(13, b1, 16);
+        vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 3); vldr(14, b1, 32);
+        vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 3); vldr(15, b1, 48);
+        b1 = b1 + (ldb << 2);
+
+        vfmla_m4(16, 20, 24, 28, 8, 4, 5, 6, 7, 0); vldr(8, b2, 0);
+        vfmla_m4(17, 21, 25, 29, 9, 4, 5, 6, 7, 0); vldr(9, b2, 16);
+        vfmla_m4(18, 22, 26, 30, 10, 4, 5, 6, 7, 0); vldr(10, b2, 32);
+        vfmla_m4(19, 23, 27, 31, 11, 4, 5, 6, 7, 0); vldr(11, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla_m4(16, 20, 24, 28, 12, 4, 5, 6, 7, 1); vldr(12, b3, 0);
+        vfmla_m4(17, 21, 25, 29, 13, 4, 5, 6, 7, 1); vldr(13, b3, 16);
+        vfmla_m4(18, 22, 26, 30, 14, 4, 5, 6, 7, 1); vldr(14, b3, 32);
+        vfmla_m4(19, 23, 27, 31, 15, 4, 5, 6, 7, 1); vldr(15, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla_m4(16, 20, 24, 28, 8, 4, 5, 6, 7, 2);
+        vfmla_m4(17, 21, 25, 29, 9, 4, 5, 6, 7, 2);
+        vfmla_m4(18, 22, 26, 30, 10, 4, 5, 6, 7, 2);
+        vfmla_m4(19, 23, 27, 31, 11, 4, 5, 6, 7, 2);
+
+        vfmla_m4(16, 20, 24, 28, 12, 4, 5, 6, 7, 3);
+        vfmla_m4(17, 21, 25, 29, 13, 4, 5, 6, 7, 3);
+        vfmla_m4(18, 22, 26, 30, 14, 4, 5, 6, 7, 3);
+        vfmla_m4(19, 23, 27, 31, 15, 4, 5, 6, 7, 3);
+    }
+
+    if (k >= 4) {
+        k -= 4;
+        vldr_post_m4(0, 1, 2, 3, a, a1, a2, a3);
+        vldp(8, 9, b, 0); vldp(10, 11, b, 32);
+        b = b + (ldb << 2);
+        vldp(12, 13, b1, 0); vldp(14, 15, b1, 32);
+        b1 = b1 + (ldb << 2);
+
+        vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 0); vldr(8, b2, 0);
+        vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 0); vldr(9, b2, 16);
+        vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 0); vldr(10, b2, 32);
+        vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 0); vldr(11, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 1); vldr(12, b3, 0);
+        vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 1); vldr(13, b3, 16);
+        vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 1); vldr(14, b3, 32);
+        vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 1); vldr(15, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 2);
+        vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 2);
+        vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 2);
+        vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 2);
+
+        vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 3);
+        vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 3);
+        vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 3);
+        vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 3);
+    }
+
+    if (k >= 2) {
+        k -= 2;
+        vldr_f64_post_m4(0, 1, 2, 3, a, a1, a2, a3);
+        vldp(8, 9, b, 0); vldp(10, 11, b, 32);
+        b = b + (ldb << 1);
+        vldp(12, 13, b1, 0); vldp(14, 15, b1, 32);
+        b1 = b1 + (ldb << 1);
+
+        vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 0);
+        vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 0);
+        vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 0);
+        vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 0);
+        vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 1);
+        vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 1);
+        vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 1);
+        vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 1);
+    }
+
+    if (k >= 1) {
+        k -= 1;
+        vldr_f32_post_m4(0, 1, 2, 3, a, a1, a2, a3);
+        vldp(8, 9, b, 0); vldp(10, 11, b, 32);
+        vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 0);
+        vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 0);
+        vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 0);
+        vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 0);
+    }
+
+    float *c1 = c + ldc;
+    float *c2 = c + (ldc << 1);
+    float *c3 = c1 + (ldc << 1);
+    if (c_state) {
+        vldr(0, c, 0);  vfadd(16, 16, 0); vstr(16, c, 0);
+        vldr(1, c, 16); vfadd(17, 17, 1); vstr(17, c, 16);
+        vldr(2, c, 32); vfadd(18, 18, 2); vstr(18, c, 32);
+        vldr(3, c, 48); vfadd(19, 19, 3); vstr(19, c, 48);
+        vldr(4, c1, 0); vfadd(20, 20, 4); vstr(20, c1, 0);
+        vldr(5, c1, 16);vfadd(21, 21, 5); vstr(21, c1, 16);
+        vldr(6, c1, 32);vfadd(22, 22, 6); vstr(22, c1, 32);
+        vldr(7, c1, 48);vfadd(23, 23, 7); vstr(23, c1, 48);
+        vldr(8, c2, 0); vfadd(24, 24, 8); vstr(24, c2, 0);
+        vldr(9, c2, 16);vfadd(25, 25, 9); vstr(25, c2, 16);
+        vldr(10,c2, 32);vfadd(26, 26, 10);vstr(26, c2, 32);
+        vldr(11,c2, 48);vfadd(27, 27, 11);vstr(27, c2, 48);
+        vldr(12,c3, 0); vfadd(28, 28, 12);vstr(28, c3, 0);
+        vldr(13,c3, 16);vfadd(29, 29, 13);vstr(29, c3, 16);
+        vldr(14,c3, 32);vfadd(30, 30, 14);vstr(30, c3, 32);
+        vldr(15,c3, 48);vfadd(31, 31, 15);vstr(31, c3, 48);
+    } else {
+        vstr(16, c, 0); vstr(17, c, 16); vstr(18, c, 32); vstr(19, c, 48);
+        vstr(20, c1, 0);vstr(21, c1, 16);vstr(22, c1, 32);vstr(23, c1, 48);
+        vstr(24, c2, 0);vstr(25, c2, 16);vstr(26, c2, 32);vstr(27, c2, 48);
+        vstr(28, c3, 0);vstr(29, c3, 16);vstr(30, c3, 32);vstr(31, c3, 48);
+    }
+}
+
+static inline void micro_kernel_4x16_nn_pbg(float *a, float *b, float *c, long int lda, long int ldb, long int ldc, long int k, long int c_state, float *pb)
+{
+    float *a1 = a + lda;
+    float *a2 = a + (lda << 1);
+    float *a3 = a1 + (lda << 1);
+    float *b1 = b + ldb;
+    float *b2 = b + (ldb << 1);
+    float *b3 = b1 + (ldb << 1);
+    vzero_m8(16, 17, 18, 19, 20, 21, 22, 23);
+    vzero_m8(24, 25, 26, 27, 28, 29, 30, 31);
+
+    if (k >= 8) {
+        k -= 8;
+        vldp_post_m4(0, 1, 2, 3, 4, 5, 6, 7, a, a1, a2, a3);
+        vldp(8, 9, b, 0); vldp(10, 11, b, 32);
+        b = b + (ldb << 2);
+        vstr_m4(8, 9, 10, 11, pb, 0, 16, 32, 48);
+        pb += 16;
+        vldp(12, 13, b1, 0); vldp(14, 15, b1, 32);
+        b1 = b1 + (ldb << 2);
+        vstr_m4(12, 13, 14, 15, pb, 0, 16, 32, 48);
+        pb += 16;
+        while (k >= 8) {
+            k -= 8;
+            vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 0); vldr(8, b2, 0); vstr(8, pb, 0);
+            vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 0); vldr(9, b2, 16); vstr(9, pb, 16);
+            vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 0); vldr(10, b2, 32); vstr(10, pb, 32);
+            vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 0); vldr(11, b2, 48); vstr(11, pb, 48);
+            b2 = b2 + (ldb << 2); pb += 16;
+
+            vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 1); vldr(12, b3, 0); vstr(12, pb, 0);
+            vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 1); vldr(13, b3, 16); vstr(13, pb, 16);
+            vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 1); vldr(14, b3, 32); vstr(14, pb, 32);
+            vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 1); vldr(15, b3, 48); vstr(15, pb, 48);
+            b3 = b3 + (ldb << 2); pb += 16;
+
+            vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 2); vldr(8, b, 0); vstr(8, pb, 0);
+            vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 2); vldr(9, b, 16); vstr(9, pb, 16);
+            vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 2); vldr(10, b, 32); vstr(10, pb, 32);
+            vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 2); vldr(11, b, 48); vstr(11, pb, 48);
+            b = b + (ldb << 2); pb += 16;
+
+            vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 3); vldr(12, b1, 0); vstr(12, pb, 0);
+            vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 3); vldr(13, b1, 16); vstr(13, pb, 16);
+            vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 3); vldr(14, b1, 32); vstr(14, pb, 32);
+            vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 3);
+            vldr_post(0, a); vldr_post(1, a1); vldr_post(2, a2); vldr_post(3, a3);
+            vldr(15, b1, 48); vstr(15, pb, 48);
+            b1 = b1 + (ldb << 2); pb += 16;
+
+            vfmla_m4(16, 20, 24, 28, 8, 4, 5, 6, 7, 0); vldr(8, b2, 0); vstr(8, pb, 0);
+            vfmla_m4(17, 21, 25, 29, 9, 4, 5, 6, 7, 0); vldr(9, b2, 16); vstr(9, pb, 16);
+            vfmla_m4(18, 22, 26, 30, 10, 4, 5, 6, 7, 0); vldr(10, b2, 32); vstr(10, pb, 32);
+            vfmla_m4(19, 23, 27, 31, 11, 4, 5, 6, 7, 0); vldr(11, b2, 48); vstr(11, pb, 48);
+            b2 = b2 + (ldb << 2); pb += 16;
+
+            vfmla_m4(16, 20, 24, 28, 12, 4, 5, 6, 7, 1); vldr(12, b3, 0); vstr(12, pb, 0);
+            vfmla_m4(17, 21, 25, 29, 13, 4, 5, 6, 7, 1); vldr(13, b3, 16); vstr(13, pb, 16);
+            vfmla_m4(18, 22, 26, 30, 14, 4, 5, 6, 7, 1); vldr(14, b3, 32); vstr(14, pb, 32);
+            vfmla_m4(19, 23, 27, 31, 15, 4, 5, 6, 7, 1); vldr(15, b3, 48); vstr(15, pb, 48);
+            b3 = b3 + (ldb << 2); pb += 16;
+
+            vfmla_m4(16, 20, 24, 28, 8, 4, 5, 6, 7, 2); vldr(8, b, 0); vstr(8, pb, 0);
+            vfmla_m4(17, 21, 25, 29, 9, 4, 5, 6, 7, 2); vldr(9, b, 16); vstr(9, pb, 16);
+            vfmla_m4(18, 22, 26, 30, 10, 4, 5, 6, 7, 2); vldr(10, b, 32); vstr(10, pb, 32);
+            vfmla_m4(19, 23, 27, 31, 11, 4, 5, 6, 7, 2); vldr(11, b, 48); vstr(11, pb, 48);
+            b = b + (ldb << 2); pb += 16;
+
+            vfmla_m4(16, 20, 24, 28, 12, 4, 5, 6, 7, 3); vldr(12, b1, 0); vstr(12, pb, 0);
+            vfmla_m4(17, 21, 25, 29, 13, 4, 5, 6, 7, 3); vldr(13, b1, 16); vstr(13, pb, 16);
+            vfmla_m4(18, 22, 26, 30, 14, 4, 5, 6, 7, 3); vldr(14, b1, 32); vstr(14, pb, 32);
+            vfmla_m4(19, 23, 27, 31, 15, 4, 5, 6, 7, 3);
+            vldr_post(4, a); vldr_post(5, a1); vldr_post(6, a2); vldr_post(7, a3);
+            vldr(15, b1, 48); vstr(15, pb, 48);
+            b1 = b1 + (ldb << 2); pb += 16;
+        }
+        // Epilogue
+        vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 0); vldr(8, b2, 0); vstr(8, pb, 0);
+        vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 0); vldr(9, b2, 16); vstr(9, pb, 16);
+        vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 0); vldr(10, b2, 32); vstr(10, pb, 32);
+        vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 0); vldr(11, b2, 48); vstr(11, pb, 48);
+        b2 = b2 + (ldb << 2); pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 1); vldr(12, b3, 0); vstr(12, pb, 0);
+        vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 1); vldr(13, b3, 16); vstr(13, pb, 16);
+        vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 1); vldr(14, b3, 32); vstr(14, pb, 32);
+        vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 1); vldr(15, b3, 48); vstr(15, pb, 48);
+        b3 = b3 + (ldb << 2); pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 2); vldr(8, b, 0); vstr(8, pb, 0);
+        vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 2); vldr(9, b, 16); vstr(9, pb, 16);
+        vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 2); vldr(10, b, 32); vstr(10, pb, 32);
+        vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 2); vldr(11, b, 48); vstr(11, pb, 48);
+        b = b + (ldb << 2); pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 3); vldr(12, b1, 0); vstr(12, pb, 0);
+        vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 3); vldr(13, b1, 16); vstr(13, pb, 16);
+        vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 3); vldr(14, b1, 32); vstr(14, pb, 32);
+        vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 3); vldr(15, b1, 48); vstr(15, pb, 48);
+        b1 = b1 + (ldb << 2); pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 8, 4, 5, 6, 7, 0); vldr(8, b2, 0); vstr(8, pb, 0);
+        vfmla_m4(17, 21, 25, 29, 9, 4, 5, 6, 7, 0); vldr(9, b2, 16); vstr(9, pb, 16);
+        vfmla_m4(18, 22, 26, 30, 10, 4, 5, 6, 7, 0); vldr(10, b2, 32); vstr(10, pb, 32);
+        vfmla_m4(19, 23, 27, 31, 11, 4, 5, 6, 7, 0); vldr(11, b2, 48); vstr(11, pb, 48);
+        b2 = b2 + (ldb << 2); pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 12, 4, 5, 6, 7, 1); vldr(12, b3, 0); vstr(12, pb, 0);
+        vfmla_m4(17, 21, 25, 29, 13, 4, 5, 6, 7, 1); vldr(13, b3, 16); vstr(13, pb, 16);
+        vfmla_m4(18, 22, 26, 30, 14, 4, 5, 6, 7, 1); vldr(14, b3, 32); vstr(14, pb, 32);
+        vfmla_m4(19, 23, 27, 31, 15, 4, 5, 6, 7, 1); vldr(15, b3, 48); vstr(15, pb, 48);
+        b3 = b3 + (ldb << 2); pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 8, 4, 5, 6, 7, 2);
+        vfmla_m4(17, 21, 25, 29, 9, 4, 5, 6, 7, 2);
+        vfmla_m4(18, 22, 26, 30, 10, 4, 5, 6, 7, 2);
+        vfmla_m4(19, 23, 27, 31, 11, 4, 5, 6, 7, 2);
+
+        vfmla_m4(16, 20, 24, 28, 12, 4, 5, 6, 7, 3);
+        vfmla_m4(17, 21, 25, 29, 13, 4, 5, 6, 7, 3);
+        vfmla_m4(18, 22, 26, 30, 14, 4, 5, 6, 7, 3);
+        vfmla_m4(19, 23, 27, 31, 15, 4, 5, 6, 7, 3);
+    }
+
+    if (k >= 4) {
+        k -= 4;
+        vldr_post_m4(0, 1, 2, 3, a, a1, a2, a3);
+        vldp(8, 9, b, 0); vldp(10, 11, b, 32);
+        b = b + (ldb << 2);
+        vstr_m4(8, 9, 10, 11, pb, 0, 16, 32, 48);
+        pb += 16;
+        vldp(12, 13, b1, 0); vldp(14, 15, b1, 32);
+        b1 = b1 + (ldb << 2);
+        vstr_m4(12, 13, 14, 15, pb, 0, 16, 32, 48);
+        pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 0); vldr(8, b2, 0); vstr(8, pb, 0);
+        vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 0); vldr(9, b2, 16); vstr(9, pb, 16);
+        vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 0); vldr(10, b2, 32); vstr(10, pb, 32);
+        vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 0); vldr(11, b2, 48); vstr(11, pb, 48);
+        b2 = b2 + (ldb << 2); pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 1); vldr(12, b3, 0); vstr(12, pb, 0);
+        vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 1); vldr(13, b3, 16); vstr(13, pb, 16);
+        vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 1); vldr(14, b3, 32); vstr(14, pb, 32);
+        vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 1); vldr(15, b3, 48); vstr(15, pb, 48);
+        b3 = b3 + (ldb << 2); pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 2);
+        vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 2);
+        vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 2);
+        vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 2);
+
+        vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 3);
+        vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 3);
+        vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 3);
+        vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 3);
+    }
+
+    if (k >= 2) {
+        k -= 2;
+        vldr_f64_post_m4(0, 1, 2, 3, a, a1, a2, a3);
+        vldp(8, 9, b, 0); vldp(10, 11, b, 32);
+        b = b + (ldb << 1);
+        vstr_m4(8, 9, 10, 11, pb, 0, 16, 32, 48);
+        pb += 16;
+        vldp(12, 13, b1, 0); vldp(14, 15, b1, 32);
+        b1 = b1 + (ldb << 1);
+        vstr_m4(12, 13, 14, 15, pb, 0, 16, 32, 48);
+        pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 0);
+        vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 0);
+        vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 0);
+        vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 0);
+        vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 1);
+        vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 1);
+        vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 1);
+        vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 1);
+    }
+
+    if (k >= 1) {
+        k -= 1;
+        vldr_f32_post_m4(0, 1, 2, 3, a, a1, a2, a3);
+        vldp(8, 9, b, 0); vldp(10, 11, b, 32);
+        vstr_m4(8, 9, 10, 11, pb, 0, 16, 32, 48);
+        vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 0);
+        vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 0);
+        vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 0);
+        vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 0);
+    }
+
+    float *c1 = c + ldc;
+    float *c2 = c + (ldc << 1);
+    float *c3 = c1 + (ldc << 1);
+    if (c_state) {
+        vldr(0, c, 0);  vfadd(16, 16, 0); vstr(16, c, 0);
+        vldr(1, c, 16); vfadd(17, 17, 1); vstr(17, c, 16);
+        vldr(2, c, 32); vfadd(18, 18, 2); vstr(18, c, 32);
+        vldr(3, c, 48); vfadd(19, 19, 3); vstr(19, c, 48);
+        vldr(4, c1, 0); vfadd(20, 20, 4); vstr(20, c1, 0);
+        vldr(5, c1, 16);vfadd(21, 21, 5); vstr(21, c1, 16);
+        vldr(6, c1, 32);vfadd(22, 22, 6); vstr(22, c1, 32);
+        vldr(7, c1, 48);vfadd(23, 23, 7); vstr(23, c1, 48);
+        vldr(8, c2, 0); vfadd(24, 24, 8); vstr(24, c2, 0);
+        vldr(9, c2, 16);vfadd(25, 25, 9); vstr(25, c2, 16);
+        vldr(10,c2, 32);vfadd(26, 26, 10);vstr(26, c2, 32);
+        vldr(11,c2, 48);vfadd(27, 27, 11);vstr(27, c2, 48);
+        vldr(12,c3, 0); vfadd(28, 28, 12);vstr(28, c3, 0);
+        vldr(13,c3, 16);vfadd(29, 29, 13);vstr(29, c3, 16);
+        vldr(14,c3, 32);vfadd(30, 30, 14);vstr(30, c3, 32);
+        vldr(15,c3, 48);vfadd(31, 31, 15);vstr(31, c3, 48);
+    } else {
+        vstr(16, c, 0); vstr(17, c, 16); vstr(18, c, 32); vstr(19, c, 48);
+        vstr(20, c1, 0);vstr(21, c1, 16);vstr(22, c1, 32);vstr(23, c1, 48);
+        vstr(24, c2, 0);vstr(25, c2, 16);vstr(26, c2, 32);vstr(27, c2, 48);
+        vstr(28, c3, 0);vstr(29, c3, 16);vstr(30, c3, 32);vstr(31, c3, 48);
+    }
+}
+
+static inline void micro_kernel_4x16_nn_pb(float *a, float *b, float *c, long int lda, long int ldb, long int ldc, long int k, long int c_state, float *pb)
+{
+    (void)b;
+    (void)ldb;
+    float *a1 = a + lda;
+    float *a2 = a + (lda << 1);
+    float *a3 = a1 + (lda << 1);
+    vzero_m8(16, 17, 18, 19, 20, 21, 22, 23);
+    vzero_m8(24, 25, 26, 27, 28, 29, 30, 31);
+
+    if (k >= 8) {
+        k -= 8;
+        vldp_post_m4(0, 1, 2, 3, 4, 5, 6, 7, a, a1, a2, a3);
+        vldp(8, 9, pb, 0); vldp(10, 11, pb, 32);
+        pb += 16;
+        vldp(12, 13, pb, 0); vldp(14, 15, pb, 32);
+        pb += 16;
+        while (k >= 8) {
+            k -= 8;
+            vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 0); vldr(8, pb, 0);
+            vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 0); vldr(9, pb, 16);
+            vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 0); vldr(10, pb, 32);
+            vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 0); vldr(11, pb, 48);
+            pb += 16;
+
+            vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 1); vldr(12, pb, 0);
+            vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 1); vldr(13, pb, 16);
+            vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 1); vldr(14, pb, 32);
+            vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 1); vldr(15, pb, 48);
+            pb += 16;
+
+            vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 2); vldr(8, pb, 0);
+            vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 2); vldr(9, pb, 16);
+            vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 2); vldr(10, pb, 32);
+            vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 2); vldr(11, pb, 48);
+            pb += 16;
+
+            vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 3); vldr(12, pb, 0);
+            vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 3); vldr(13, pb, 16);
+            vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 3); vldr(14, pb, 32);
+            vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 3);
+            vldr_post(0, a); vldr_post(1, a1); vldr_post(2, a2); vldr_post(3, a3);
+            vldr(15, pb, 48);
+            pb += 16;
+
+            vfmla_m4(16, 20, 24, 28, 8, 4, 5, 6, 7, 0); vldr(8, pb, 0);
+            vfmla_m4(17, 21, 25, 29, 9, 4, 5, 6, 7, 0); vldr(9, pb, 16);
+            vfmla_m4(18, 22, 26, 30, 10, 4, 5, 6, 7, 0); vldr(10, pb, 32);
+            vfmla_m4(19, 23, 27, 31, 11, 4, 5, 6, 7, 0); vldr(11, pb, 48);
+            pb += 16;
+
+            vfmla_m4(16, 20, 24, 28, 12, 4, 5, 6, 7, 1); vldr(12, pb, 0);
+            vfmla_m4(17, 21, 25, 29, 13, 4, 5, 6, 7, 1); vldr(13, pb, 16);
+            vfmla_m4(18, 22, 26, 30, 14, 4, 5, 6, 7, 1); vldr(14, pb, 32);
+            vfmla_m4(19, 23, 27, 31, 15, 4, 5, 6, 7, 1); vldr(15, pb, 48);
+            pb += 16;
+
+            vfmla_m4(16, 20, 24, 28, 8, 4, 5, 6, 7, 2); vldr(8, pb, 0);
+            vfmla_m4(17, 21, 25, 29, 9, 4, 5, 6, 7, 2); vldr(9, pb, 16);
+            vfmla_m4(18, 22, 26, 30, 10, 4, 5, 6, 7, 2); vldr(10, pb, 32);
+            vfmla_m4(19, 23, 27, 31, 11, 4, 5, 6, 7, 2); vldr(11, pb, 48);
+            pb += 16;
+
+            vfmla_m4(16, 20, 24, 28, 12, 4, 5, 6, 7, 3); vldr(12, pb, 0);
+            vfmla_m4(17, 21, 25, 29, 13, 4, 5, 6, 7, 3); vldr(13, pb, 16);
+            vfmla_m4(18, 22, 26, 30, 14, 4, 5, 6, 7, 3); vldr(14, pb, 32);
+            vfmla_m4(19, 23, 27, 31, 15, 4, 5, 6, 7, 3);
+            vldr_post(4, a); vldr_post(5, a1); vldr_post(6, a2); vldr_post(7, a3);
+            vldr(15, pb, 48);
+            pb += 16;
+        }
+        vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 0); vldr(8, pb, 0);
+        vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 0); vldr(9, pb, 16);
+        vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 0); vldr(10, pb, 32);
+        vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 0); vldr(11, pb, 48);
+        pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 1); vldr(12, pb, 0);
+        vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 1); vldr(13, pb, 16);
+        vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 1); vldr(14, pb, 32);
+        vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 1); vldr(15, pb, 48);
+        pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 2); vldr(8, pb, 0);
+        vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 2); vldr(9, pb, 16);
+        vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 2); vldr(10, pb, 32);
+        vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 2); vldr(11, pb, 48);
+        pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 3); vldr(12, pb, 0);
+        vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 3); vldr(13, pb, 16);
+        vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 3); vldr(14, pb, 32);
+        vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 3); vldr(15, pb, 48);
+        pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 8, 4, 5, 6, 7, 0); vldr(8, pb, 0);
+        vfmla_m4(17, 21, 25, 29, 9, 4, 5, 6, 7, 0); vldr(9, pb, 16);
+        vfmla_m4(18, 22, 26, 30, 10, 4, 5, 6, 7, 0); vldr(10, pb, 32);
+        vfmla_m4(19, 23, 27, 31, 11, 4, 5, 6, 7, 0); vldr(11, pb, 48);
+        pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 12, 4, 5, 6, 7, 1); vldr(12, pb, 0);
+        vfmla_m4(17, 21, 25, 29, 13, 4, 5, 6, 7, 1); vldr(13, pb, 16);
+        vfmla_m4(18, 22, 26, 30, 14, 4, 5, 6, 7, 1); vldr(14, pb, 32);
+        vfmla_m4(19, 23, 27, 31, 15, 4, 5, 6, 7, 1); vldr(15, pb, 48);
+        pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 8, 4, 5, 6, 7, 2);
+        vfmla_m4(17, 21, 25, 29, 9, 4, 5, 6, 7, 2);
+        vfmla_m4(18, 22, 26, 30, 10, 4, 5, 6, 7, 2);
+        vfmla_m4(19, 23, 27, 31, 11, 4, 5, 6, 7, 2);
+
+        vfmla_m4(16, 20, 24, 28, 12, 4, 5, 6, 7, 3);
+        vfmla_m4(17, 21, 25, 29, 13, 4, 5, 6, 7, 3);
+        vfmla_m4(18, 22, 26, 30, 14, 4, 5, 6, 7, 3);
+        vfmla_m4(19, 23, 27, 31, 15, 4, 5, 6, 7, 3);
+    }
+
+    if (k >= 4) {
+        k -= 4;
+        vldr_post_m4(0, 1, 2, 3, a, a1, a2, a3);
+        vldp(8, 9, pb, 0); vldp(10, 11, pb, 32);
+        pb += 16;
+        vldp(12, 13, pb, 0); vldp(14, 15, pb, 32);
+        pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 0); vldr(8, pb, 0);
+        vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 0); vldr(9, pb, 16);
+        vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 0); vldr(10, pb, 32);
+        vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 0); vldr(11, pb, 48);
+        pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 1); vldr(12, pb, 0);
+        vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 1); vldr(13, pb, 16);
+        vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 1); vldr(14, pb, 32);
+        vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 1); vldr(15, pb, 48);
+        pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 2);
+        vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 2);
+        vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 2);
+        vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 2);
+
+        vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 3);
+        vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 3);
+        vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 3);
+        vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 3);
+    }
+
+    if (k >= 2) {
+        k -= 2;
+        vldr_f64_post_m4(0, 1, 2, 3, a, a1, a2, a3);
+        vldp(8, 9, pb, 0); vldp(10, 11, pb, 32);
+        pb += 16;
+        vldp(12, 13, pb, 0); vldp(14, 15, pb, 32);
+        pb += 16;
+
+        vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 0);
+        vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 0);
+        vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 0);
+        vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 0);
+        vfmla_m4(16, 20, 24, 28, 12, 0, 1, 2, 3, 1);
+        vfmla_m4(17, 21, 25, 29, 13, 0, 1, 2, 3, 1);
+        vfmla_m4(18, 22, 26, 30, 14, 0, 1, 2, 3, 1);
+        vfmla_m4(19, 23, 27, 31, 15, 0, 1, 2, 3, 1);
+    }
+
+    if (k >= 1) {
+        k -= 1;
+        vldr_f32_post_m4(0, 1, 2, 3, a, a1, a2, a3);
+        vldp(8, 9, pb, 0); vldp(10, 11, pb, 32);
+        vfmla_m4(16, 20, 24, 28, 8, 0, 1, 2, 3, 0);
+        vfmla_m4(17, 21, 25, 29, 9, 0, 1, 2, 3, 0);
+        vfmla_m4(18, 22, 26, 30, 10, 0, 1, 2, 3, 0);
+        vfmla_m4(19, 23, 27, 31, 11, 0, 1, 2, 3, 0);
+    }
+
+    float *c1 = c + ldc;
+    float *c2 = c + (ldc << 1);
+    float *c3 = c1 + (ldc << 1);
+    if (c_state) {
+        vldr(0, c, 0);  vfadd(16, 16, 0); vstr(16, c, 0);
+        vldr(1, c, 16); vfadd(17, 17, 1); vstr(17, c, 16);
+        vldr(2, c, 32); vfadd(18, 18, 2); vstr(18, c, 32);
+        vldr(3, c, 48); vfadd(19, 19, 3); vstr(19, c, 48);
+        vldr(4, c1, 0); vfadd(20, 20, 4); vstr(20, c1, 0);
+        vldr(5, c1, 16);vfadd(21, 21, 5); vstr(21, c1, 16);
+        vldr(6, c1, 32);vfadd(22, 22, 6); vstr(22, c1, 32);
+        vldr(7, c1, 48);vfadd(23, 23, 7); vstr(23, c1, 48);
+        vldr(8, c2, 0); vfadd(24, 24, 8); vstr(24, c2, 0);
+        vldr(9, c2, 16);vfadd(25, 25, 9); vstr(25, c2, 16);
+        vldr(10,c2, 32);vfadd(26, 26, 10);vstr(26, c2, 32);
+        vldr(11,c2, 48);vfadd(27, 27, 11);vstr(27, c2, 48);
+        vldr(12,c3, 0); vfadd(28, 28, 12);vstr(28, c3, 0);
+        vldr(13,c3, 16);vfadd(29, 29, 13);vstr(29, c3, 16);
+        vldr(14,c3, 32);vfadd(30, 30, 14);vstr(30, c3, 32);
+        vldr(15,c3, 48);vfadd(31, 31, 15);vstr(31, c3, 48);
+    } else {
+        vstr(16, c, 0); vstr(17, c, 16); vstr(18, c, 32); vstr(19, c, 48);
+        vstr(20, c1, 0);vstr(21, c1, 16);vstr(22, c1, 32);vstr(23, c1, 48);
+        vstr(24, c2, 0);vstr(25, c2, 16);vstr(26, c2, 32);vstr(27, c2, 48);
+        vstr(28, c3, 0);vstr(29, c3, 16);vstr(30, c3, 32);vstr(31, c3, 48);
+    }
+}
+
+static inline void micro_kernel_4x16_nn_pa_pb(float *pa, float *c, long int ldc, long int k, long int c_state, float *pb)
+{
+#define PA_COMPUTE(a, b0, b1, b2, b3) \
+    vfmla_m4_pa(16, 20, 24, 28, b0, a); \
+    vfmla_m4_pa(17, 21, 25, 29, b1, a); \
+    vfmla_m4_pa(18, 22, 26, 30, b2, a); \
+    vfmla_m4_pa(19, 23, 27, 31, b3, a);
+
+#define PA_COMPUTE_LOAD(a, b0, b1, b2, b3, l0, l1, l2, l3, pb_addr) \
+    vfmla_m4_pa(16, 20, 24, 28, b0, a); vldr(l0, pb_addr, 0); \
+    vfmla_m4_pa(17, 21, 25, 29, b1, a); vldr(l1, pb_addr, 16); \
+    vfmla_m4_pa(18, 22, 26, 30, b2, a); vldr(l2, pb_addr, 32); \
+    vfmla_m4_pa(19, 23, 27, 31, b3, a); vldr(l3, pb_addr, 48); \
+    pb_addr = (pb_addr) + 16;
+
+    float *c1 = c + ldc;
+    float *c2 = c + (ldc << 1);
+    float *c3 = c1 + (ldc << 1);
+    long int k8 = k >> 3;
+    long int ktail = k & 7;
+
+    vzero_m8(16, 17, 18, 19, 20, 21, 22, 23);
+    vzero_m8(24, 25, 26, 27, 28, 29, 30, 31);
+
+    while (k8 > 0) {
+        vldp(0, 1, pa, 0);
+        vldp(2, 3, pa, 32);
+        vldp(4, 5, pa, 64);
+        vldp(6, 7, pa, 96);
+        pa += 32;
+        vldp(8, 9, pb, 0);
+        vldp(10, 11, pb, 32);
+        pb += 16;
+        vldp(12, 13, pb, 0);
+        vldp(14, 15, pb, 32);
+        pb += 16;
+
+        PA_COMPUTE(0, 8, 9, 10, 11);
+        PA_COMPUTE_LOAD(1, 12, 13, 14, 15, 8, 9, 10, 11, pb);
+        PA_COMPUTE_LOAD(2, 8, 9, 10, 11, 12, 13, 14, 15, pb);
+        PA_COMPUTE_LOAD(3, 12, 13, 14, 15, 8, 9, 10, 11, pb);
+        PA_COMPUTE_LOAD(4, 8, 9, 10, 11, 12, 13, 14, 15, pb);
+        PA_COMPUTE_LOAD(5, 12, 13, 14, 15, 8, 9, 10, 11, pb);
+        PA_COMPUTE_LOAD(6, 8, 9, 10, 11, 12, 13, 14, 15, pb);
+        PA_COMPUTE(7, 12, 13, 14, 15);
+        k8--;
+    }
+
+    while (ktail > 0) {
+        vldr_post(0, pa);
+        vldp(8, 9, pb, 0);
+        vldp(10, 11, pb, 32);
+        pb += 16;
+        PA_COMPUTE(0, 8, 9, 10, 11);
+        ktail--;
+    }
+
+    if (c_state) {
+        vldr(0, c, 0);  vfadd(16, 16, 0);  vstr(16, c, 0);
+        vldr(1, c, 16);  vfadd(17, 17, 1);  vstr(17, c, 16);
+        vldr(2, c, 32);  vfadd(18, 18, 2);  vstr(18, c, 32);
+        vldr(3, c, 48);  vfadd(19, 19, 3);  vstr(19, c, 48);
+        vldr(4, c1, 0);  vfadd(20, 20, 4);  vstr(20, c1, 0);
+        vldr(5, c1, 16);  vfadd(21, 21, 5);  vstr(21, c1, 16);
+        vldr(6, c1, 32);  vfadd(22, 22, 6);  vstr(22, c1, 32);
+        vldr(7, c1, 48);  vfadd(23, 23, 7);  vstr(23, c1, 48);
+        vldr(8, c2, 0);  vfadd(24, 24, 8);  vstr(24, c2, 0);
+        vldr(9, c2, 16);  vfadd(25, 25, 9);  vstr(25, c2, 16);
+        vldr(10, c2, 32);  vfadd(26, 26, 10);  vstr(26, c2, 32);
+        vldr(11, c2, 48);  vfadd(27, 27, 11);  vstr(27, c2, 48);
+        vldr(12, c3, 0);  vfadd(28, 28, 12);  vstr(28, c3, 0);
+        vldr(13, c3, 16);  vfadd(29, 29, 13);  vstr(29, c3, 16);
+        vldr(14, c3, 32);  vfadd(30, 30, 14);  vstr(30, c3, 32);
+        vldr(15, c3, 48);  vfadd(31, 31, 15);  vstr(31, c3, 48);
+    } else {
+        vstr(16, c, 0);  vstr(17, c, 16);  vstr(18, c, 32);  vstr(19, c, 48);
+        vstr(20, c1, 0);  vstr(21, c1, 16);  vstr(22, c1, 32);  vstr(23, c1, 48);
+        vstr(24, c2, 0);  vstr(25, c2, 16);  vstr(26, c2, 32);  vstr(27, c2, 48);
+        vstr(28, c3, 0);  vstr(29, c3, 16);  vstr(30, c3, 32);  vstr(31, c3, 48);
+    }
+
+#undef PA_COMPUTE
+#undef PA_COMPUTE_LOAD
+}
+
+static inline void micro_kernel_3x16_nn(float *a, float *b, float *c, long int lda, long int ldb, long int ldc, long int k, long int c_state)
+{
+    float *a1 = a + lda;
+    float *a2 = a + (lda << 1);
+    float *b1 = b + ldb;
+    float *b2 = b + (ldb << 1);
+    float *b3 = b1 + (ldb << 1);
+    vzero_m8(6, 7, 16, 17, 18, 19, 20, 21);
+    vzero_m4(22, 23, 24, 25);
+
+    if (k >= 8) {
+        k -= 8;
+        vldp_post_m3(0, 1, 2, 3, 4, 5, a, a1, a2);
+        vldp(26, 27, b, 0); vldp(28, 29, b, 32);
+        b = b + (ldb << 2);
+        vldp(30, 31, b1, 0); vldp(8, 9, b1, 32);
+        b1 = b1 + (ldb << 2);
+        while (k >= 8) {
+            k -= 8;
+            vfmla_m3(6, 18, 22, 26, 0, 1, 2, 0); vldr(26, b2, 0);
+            vfmla_m3(7, 19, 23, 27, 0, 1, 2, 0); vldr(27, b2, 16);
+            vfmla_m3(16, 20, 24, 28, 0, 1, 2, 0); vldr(28, b2, 32);
+            vfmla_m3(17, 21, 25, 29, 0, 1, 2, 0); vldr(29, b2, 48);
+            b2 = b2 + (ldb << 2);
+
+            vfmla_m3(6, 18, 22, 30, 0, 1, 2, 1); vldr(30, b3, 0);
+            vfmla_m3(7, 19, 23, 31, 0, 1, 2, 1); vldr(31, b3, 16);
+            vfmla_m3(16, 20, 24, 8, 0, 1, 2, 1); vldr(8, b3, 32);
+            vfmla_m3(17, 21, 25, 9, 0, 1, 2, 1); vldr(9, b3, 48);
+            b3 = b3 + (ldb << 2);
+
+            vfmla_m3(6, 18, 22, 26, 0, 1, 2, 2); vldr(26, b, 0);
+            vfmla_m3(7, 19, 23, 27, 0, 1, 2, 2); vldr(27, b, 16);
+            vfmla_m3(16, 20, 24, 28, 0, 1, 2, 2); vldr(28, b, 32);
+            vfmla_m3(17, 21, 25, 29, 0, 1, 2, 2); vldr(29, b, 48);
+            b = b + (ldb << 2);
+
+            vfmla_m3(6, 18, 22, 30, 0, 1, 2, 3); vldr(30, b1, 0);
+            vfmla_m3(7, 19, 23, 31, 0, 1, 2, 3); vldr(31, b1, 16);
+            vfmla_m3(16, 20, 24, 8, 0, 1, 2, 3); vldr(8, b1, 32);
+            vfmla_m3(17, 21, 25, 9, 0, 1, 2, 3);
+            vldr_post(0, a); vldr_post(1, a1); vldr_post(2, a2);
+            vldr(9, b1, 48);
+            b1 = b1 + (ldb << 2);
+
+            vfmla_m3(6, 18, 22, 26, 3, 4, 5, 0); vldr(26, b2, 0);
+            vfmla_m3(7, 19, 23, 27, 3, 4, 5, 0); vldr(27, b2, 16);
+            vfmla_m3(16, 20, 24, 28, 3, 4, 5, 0); vldr(28, b2, 32);
+            vfmla_m3(17, 21, 25, 29, 3, 4, 5, 0); vldr(29, b2, 48);
+            b2 = b2 + (ldb << 2);
+
+            vfmla_m3(6, 18, 22, 30, 3, 4, 5, 1); vldr(30, b3, 0);
+            vfmla_m3(7, 19, 23, 31, 3, 4, 5, 1); vldr(31, b3, 16);
+            vfmla_m3(16, 20, 24, 8, 3, 4, 5, 1); vldr(8, b3, 32);
+            vfmla_m3(17, 21, 25, 9, 3, 4, 5, 1); vldr(9, b3, 48);
+            b3 = b3 + (ldb << 2);
+
+            vfmla_m3(6, 18, 22, 26, 3, 4, 5, 2); vldr(26, b, 0);
+            vfmla_m3(7, 19, 23, 27, 3, 4, 5, 2); vldr(27, b, 16);
+            vfmla_m3(16, 20, 24, 28, 3, 4, 5, 2); vldr(28, b, 32);
+            vfmla_m3(17, 21, 25, 29, 3, 4, 5, 2); vldr(29, b, 48);
+            b = b + (ldb << 2);
+
+            vfmla_m3(6, 18, 22, 30, 3, 4, 5, 3); vldr(30, b1, 0);
+            vfmla_m3(7, 19, 23, 31, 3, 4, 5, 3); vldr(31, b1, 16);
+            vfmla_m3(16, 20, 24, 8, 3, 4, 5, 3); vldr(8, b1, 32);
+            vfmla_m3(17, 21, 25, 9, 3, 4, 5, 3);
+            vldr_post(3, a); vldr_post(4, a1); vldr_post(5, a2);
+            vldr(9, b1, 48);
+            b1 = b1 + (ldb << 2);
+        }
+        // Epilogue: process the last 8 pre-loaded A elements
+        vfmla_m3(6, 18, 22, 26, 0, 1, 2, 0); vldr(26, b2, 0);
+        vfmla_m3(7, 19, 23, 27, 0, 1, 2, 0); vldr(27, b2, 16);
+        vfmla_m3(16, 20, 24, 28, 0, 1, 2, 0); vldr(28, b2, 32);
+        vfmla_m3(17, 21, 25, 29, 0, 1, 2, 0); vldr(29, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla_m3(6, 18, 22, 30, 0, 1, 2, 1); vldr(30, b3, 0);
+        vfmla_m3(7, 19, 23, 31, 0, 1, 2, 1); vldr(31, b3, 16);
+        vfmla_m3(16, 20, 24, 8, 0, 1, 2, 1); vldr(8, b3, 32);
+        vfmla_m3(17, 21, 25, 9, 0, 1, 2, 1); vldr(9, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla_m3(6, 18, 22, 26, 0, 1, 2, 2); vldr(26, b, 0);
+        vfmla_m3(7, 19, 23, 27, 0, 1, 2, 2); vldr(27, b, 16);
+        vfmla_m3(16, 20, 24, 28, 0, 1, 2, 2); vldr(28, b, 32);
+        vfmla_m3(17, 21, 25, 29, 0, 1, 2, 2); vldr(29, b, 48);
+        b = b + (ldb << 2);
+
+        vfmla_m3(6, 18, 22, 30, 0, 1, 2, 3); vldr(30, b1, 0);
+        vfmla_m3(7, 19, 23, 31, 0, 1, 2, 3); vldr(31, b1, 16);
+        vfmla_m3(16, 20, 24, 8, 0, 1, 2, 3); vldr(8, b1, 32);
+        vfmla_m3(17, 21, 25, 9, 0, 1, 2, 3);
+        vldr(9, b1, 48);
+        b1 = b1 + (ldb << 2);
+
+        // Second half of epilogue: lanes 0-3 of v4-v6
+        vfmla_m3(6, 18, 22, 26, 3, 4, 5, 0); vldr(26, b2, 0);
+        vfmla_m3(7, 19, 23, 27, 3, 4, 5, 0); vldr(27, b2, 16);
+        vfmla_m3(16, 20, 24, 28, 3, 4, 5, 0); vldr(28, b2, 32);
+        vfmla_m3(17, 21, 25, 29, 3, 4, 5, 0); vldr(29, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla_m3(6, 18, 22, 30, 3, 4, 5, 1); vldr(30, b3, 0);
+        vfmla_m3(7, 19, 23, 31, 3, 4, 5, 1); vldr(31, b3, 16);
+        vfmla_m3(16, 20, 24, 8, 3, 4, 5, 1); vldr(8, b3, 32);
+        vfmla_m3(17, 21, 25, 9, 3, 4, 5, 1); vldr(9, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla_m3(6, 18, 22, 26, 3, 4, 5, 2);
+        vfmla_m3(7, 19, 23, 27, 3, 4, 5, 2);
+        vfmla_m3(16, 20, 24, 28, 3, 4, 5, 2);
+        vfmla_m3(17, 21, 25, 29, 3, 4, 5, 2);
+
+        vfmla_m3(6, 18, 22, 30, 3, 4, 5, 3);
+        vfmla_m3(7, 19, 23, 31, 3, 4, 5, 3);
+        vfmla_m3(16, 20, 24, 8, 3, 4, 5, 3);
+        vfmla_m3(17, 21, 25, 9, 3, 4, 5, 3);
+    }
+
+    if (k >= 4) {
+        k -= 4;
+        vldr_post_m3(0, 1, 2, a, a1, a2);
+        vldp(26, 27, b, 0); vldp(28, 29, b, 32);
+        b = b + (ldb << 2);
+        vldp(30, 31, b1, 0); vldp(8, 9, b1, 32);
+        b1 = b1 + (ldb << 2);
+
+        vfmla_m3(6, 18, 22, 26, 0, 1, 2, 0); vldr(26, b2, 0);
+        vfmla_m3(7, 19, 23, 27, 0, 1, 2, 0); vldr(27, b2, 16);
+        vfmla_m3(16, 20, 24, 28, 0, 1, 2, 0); vldr(28, b2, 32);
+        vfmla_m3(17, 21, 25, 29, 0, 1, 2, 0); vldr(29, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla_m3(6, 18, 22, 30, 0, 1, 2, 1); vldr(30, b3, 0);
+        vfmla_m3(7, 19, 23, 31, 0, 1, 2, 1); vldr(31, b3, 16);
+        vfmla_m3(16, 20, 24, 8, 0, 1, 2, 1); vldr(8, b3, 32);
+        vfmla_m3(17, 21, 25, 9, 0, 1, 2, 1); vldr(9, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla_m3(6, 18, 22, 26, 0, 1, 2, 2);
+        vfmla_m3(7, 19, 23, 27, 0, 1, 2, 2);
+        vfmla_m3(16, 20, 24, 28, 0, 1, 2, 2);
+        vfmla_m3(17, 21, 25, 29, 0, 1, 2, 2);
+
+        vfmla_m3(6, 18, 22, 30, 0, 1, 2, 3);
+        vfmla_m3(7, 19, 23, 31, 0, 1, 2, 3);
+        vfmla_m3(16, 20, 24, 8, 0, 1, 2, 3);
+        vfmla_m3(17, 21, 25, 9, 0, 1, 2, 3);
+    }
+
+    if (k >= 2) {
+        k -= 2;
+        vldr_f64_post_m3(0, 1, 2, a, a1, a2);
+        vldp(26, 27, b, 0); vldp(28, 29, b, 32);
+        b = b + (ldb << 1);
+        vldp(30, 31, b1, 0); vldp(8, 9, b1, 32);
+        b1 = b1 + (ldb << 1);
+
+        vfmla_m3(6, 18, 22, 26, 0, 1, 2, 0);
+        vfmla_m3(7, 19, 23, 27, 0, 1, 2, 0);
+        vfmla_m3(16, 20, 24, 28, 0, 1, 2, 0);
+        vfmla_m3(17, 21, 25, 29, 0, 1, 2, 0);
+        vfmla_m3(6, 18, 22, 30, 0, 1, 2, 1);
+        vfmla_m3(7, 19, 23, 31, 0, 1, 2, 1);
+        vfmla_m3(16, 20, 24, 8, 0, 1, 2, 1);
+        vfmla_m3(17, 21, 25, 9, 0, 1, 2, 1);
+    }
+
+    if (k >= 1) {
+        k -= 1;
+        vldr_f32_post_m3(0, 1, 2, a, a1, a2);
+        vldp(26, 27, b, 0); vldp(28, 29, b, 32);
+        vfmla_m3(6, 18, 22, 26, 0, 1, 2, 0);
+        vfmla_m3(7, 19, 23, 27, 0, 1, 2, 0);
+        vfmla_m3(16, 20, 24, 28, 0, 1, 2, 0);
+        vfmla_m3(17, 21, 25, 29, 0, 1, 2, 0);
+    }
+
+    float *c1 = c + ldc;
+    float *c2 = c + (ldc << 1);
+    if (c_state) {
+        vldr(0, c, 0);  vfadd(6, 6, 0); vstr(6, c, 0);
+        vldr(1, c, 16); vfadd(7, 7, 1); vstr(7, c, 16);
+        vldr(2, c, 32); vfadd(16, 16, 2); vstr(16, c, 32);
+        vldr(3, c, 48); vfadd(17, 17, 3); vstr(17, c, 48);
+        vldr(4, c1, 0); vfadd(18, 18, 4); vstr(18, c1, 0);
+        vldr(5, c1, 16);vfadd(19, 19, 5); vstr(19, c1, 16);
+        vldr(6, c1, 32);vfadd(20, 20, 6); vstr(20, c1, 32);
+        vldr(7, c1, 48);vfadd(21, 21, 7); vstr(21, c1, 48);
+        vldr(8, c2, 0); vfadd(22, 22, 8); vstr(22, c2, 0);
+        vldr(9, c2, 16);vfadd(23, 23, 9); vstr(23, c2, 16);
+        vldr(10,c2, 32);vfadd(24, 24, 10);vstr(24, c2, 32);
+        vldr(11,c2, 48);vfadd(25, 25, 11);vstr(25, c2, 48);
+    } else {
+        vstr(6, c, 0); vstr(7, c, 16); vstr(16, c, 32); vstr(17, c, 48);
+        vstr(18, c1, 0);vstr(19, c1, 16);vstr(20, c1, 32);vstr(21, c1, 48);
+        vstr(22, c2, 0);vstr(23, c2, 16);vstr(24, c2, 32);vstr(25, c2, 48);
+    }
+}
+
+static inline void micro_kernel_2x16_nn(float *a, float *b, float *c, long int lda, long int ldb, long int ldc, long int k, long int c_state)
+{
+    float *a1 = a + lda;
+    float *b1 = b + ldb;
+    float *b2 = b + (ldb << 1);
+    float *b3 = b1 + (ldb << 1);
+    vzero_m8(4, 5, 6, 7, 16, 17, 18, 19);
+    vzero_m8(20, 21, 22, 23, 24, 25, 26, 27);
+
+    if (k >= 8) {
+        k -= 8;
+        vldp_post_m2(0, 1, 2, 3, a, a1);
+        vldp(28, 29, b, 0); vldp(30, 31, b, 32);
+        b = b + (ldb << 2);
+        vldp(8, 9, b1, 0); vldp(10, 11, b1, 32);
+        b1 = b1 + (ldb << 2);
+        while (k >= 8) {
+            k -= 8;
+            vfmla_m2(4, 16, 28, 0, 1, 0); vldr(28, b2, 0);
+            vfmla_m2(5, 17, 29, 0, 1, 0); vldr(29, b2, 16);
+            vfmla_m2(6, 18, 30, 0, 1, 0); vldr(30, b2, 32);
+            vfmla_m2(7, 19, 31, 0, 1, 0); vldr(31, b2, 48);
+            b2 = b2 + (ldb << 2);
+
+            vfmla_m2(20, 24, 8, 0, 1, 1); vldr(8, b3, 0);
+            vfmla_m2(21, 25, 9, 0, 1, 1); vldr(9, b3, 16);
+            vfmla_m2(22, 26, 10, 0, 1, 1); vldr(10, b3, 32);
+            vfmla_m2(23, 27, 11, 0, 1, 1); vldr(11, b3, 48);
+            b3 = b3 + (ldb << 2);
+
+            vfmla_m2(4, 16, 28, 0, 1, 2); vldr(28, b, 0);
+            vfmla_m2(5, 17, 29, 0, 1, 2); vldr(29, b, 16);
+            vfmla_m2(6, 18, 30, 0, 1, 2); vldr(30, b, 32);
+            vfmla_m2(7, 19, 31, 0, 1, 2); vldr(31, b, 48);
+            b = b + (ldb << 2);
+
+            vfmla_m2(20, 24, 8, 0, 1, 3); vldr(8, b1, 0);
+            vfmla_m2(21, 25, 9, 0, 1, 3); vldr(9, b1, 16);
+            vfmla_m2(22, 26, 10, 0, 1, 3); vldr(10, b1, 32);
+            vfmla_m2(23, 27, 11, 0, 1, 3);
+            vldr_post(0, a); vldr_post(1, a1);
+            vldr(11, b1, 48);
+            b1 = b1 + (ldb << 2);
+
+            vfmla_m2(4, 16, 28, 2, 3, 0); vldr(28, b2, 0);
+            vfmla_m2(5, 17, 29, 2, 3, 0); vldr(29, b2, 16);
+            vfmla_m2(6, 18, 30, 2, 3, 0); vldr(30, b2, 32);
+            vfmla_m2(7, 19, 31, 2, 3, 0); vldr(31, b2, 48);
+            b2 = b2 + (ldb << 2);
+
+            vfmla_m2(20, 24, 8, 2, 3, 1); vldr(8, b3, 0);
+            vfmla_m2(21, 25, 9, 2, 3, 1); vldr(9, b3, 16);
+            vfmla_m2(22, 26, 10, 2, 3, 1); vldr(10, b3, 32);
+            vfmla_m2(23, 27, 11, 2, 3, 1); vldr(11, b3, 48);
+            b3 = b3 + (ldb << 2);
+
+            vfmla_m2(4, 16, 28, 2, 3, 2); vldr(28, b, 0);
+            vfmla_m2(5, 17, 29, 2, 3, 2); vldr(29, b, 16);
+            vfmla_m2(6, 18, 30, 2, 3, 2); vldr(30, b, 32);
+            vfmla_m2(7, 19, 31, 2, 3, 2); vldr(31, b, 48);
+            b = b + (ldb << 2);
+
+            vfmla_m2(20, 24, 8, 2, 3, 3); vldr(8, b1, 0);
+            vfmla_m2(21, 25, 9, 2, 3, 3); vldr(9, b1, 16);
+            vfmla_m2(22, 26, 10, 2, 3, 3); vldr(10, b1, 32);
+            vfmla_m2(23, 27, 11, 2, 3, 3);
+            vldr_post(2, a); vldr_post(3, a1);
+            vldr(11, b1, 48);
+            b1 = b1 + (ldb << 2);
+        }
+        vfmla_m2(4, 16, 28, 0, 1, 0); vldr(28, b2, 0);
+        vfmla_m2(5, 17, 29, 0, 1, 0); vldr(29, b2, 16);
+        vfmla_m2(6, 18, 30, 0, 1, 0); vldr(30, b2, 32);
+        vfmla_m2(7, 19, 31, 0, 1, 0); vldr(31, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla_m2(20, 24, 8, 0, 1, 1); vldr(8, b3, 0);
+        vfmla_m2(21, 25, 9, 0, 1, 1); vldr(9, b3, 16);
+        vfmla_m2(22, 26, 10, 0, 1, 1); vldr(10, b3, 32);
+        vfmla_m2(23, 27, 11, 0, 1, 1); vldr(11, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla_m2(4, 16, 28, 0, 1, 2); vldr(28, b, 0);
+        vfmla_m2(5, 17, 29, 0, 1, 2); vldr(29, b, 16);
+        vfmla_m2(6, 18, 30, 0, 1, 2); vldr(30, b, 32);
+        vfmla_m2(7, 19, 31, 0, 1, 2); vldr(31, b, 48);
+        b = b + (ldb << 2);
+
+        vfmla_m2(20, 24, 8, 0, 1, 3); vldr(8, b1, 0);
+        vfmla_m2(21, 25, 9, 0, 1, 3); vldr(9, b1, 16);
+        vfmla_m2(22, 26, 10, 0, 1, 3); vldr(10, b1, 32);
+        vfmla_m2(23, 27, 11, 0, 1, 3); vldr(11, b1, 48);
+        b1 = b1 + (ldb << 2);
+
+        vfmla_m2(4, 16, 28, 2, 3, 0); vldr(28, b2, 0);
+        vfmla_m2(5, 17, 29, 2, 3, 0); vldr(29, b2, 16);
+        vfmla_m2(6, 18, 30, 2, 3, 0); vldr(30, b2, 32);
+        vfmla_m2(7, 19, 31, 2, 3, 0); vldr(31, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla_m2(20, 24, 8, 2, 3, 1); vldr(8, b3, 0);
+        vfmla_m2(21, 25, 9, 2, 3, 1); vldr(9, b3, 16);
+        vfmla_m2(22, 26, 10, 2, 3, 1); vldr(10, b3, 32);
+        vfmla_m2(23, 27, 11, 2, 3, 1); vldr(11, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla_m2(4, 16, 28, 2, 3, 2);
+        vfmla_m2(5, 17, 29, 2, 3, 2);
+        vfmla_m2(6, 18, 30, 2, 3, 2);
+        vfmla_m2(7, 19, 31, 2, 3, 2);
+
+        vfmla_m2(20, 24, 8, 2, 3, 3);
+        vfmla_m2(21, 25, 9, 2, 3, 3);
+        vfmla_m2(22, 26, 10, 2, 3, 3);
+        vfmla_m2(23, 27, 11, 2, 3, 3);
+    }
+
+    if (k >= 4) {
+        k -= 4;
+        vldr_post_m2(0, 1, a, a1);
+        vldp(28, 29, b, 0); vldp(30, 31, b, 32);
+        b = b + (ldb << 2);
+        vldp(8, 9, b1, 0); vldp(10, 11, b1, 32);
+        b1 = b1 + (ldb << 2);
+
+        vfmla_m2(4, 16, 28, 0, 1, 0); vldr(28, b2, 0);
+        vfmla_m2(5, 17, 29, 0, 1, 0); vldr(29, b2, 16);
+        vfmla_m2(6, 18, 30, 0, 1, 0); vldr(30, b2, 32);
+        vfmla_m2(7, 19, 31, 0, 1, 0); vldr(31, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla_m2(20, 24, 8, 0, 1, 1); vldr(8, b3, 0);
+        vfmla_m2(21, 25, 9, 0, 1, 1); vldr(9, b3, 16);
+        vfmla_m2(22, 26, 10, 0, 1, 1); vldr(10, b3, 32);
+        vfmla_m2(23, 27, 11, 0, 1, 1); vldr(11, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla_m2(4, 16, 28, 0, 1, 2);
+        vfmla_m2(5, 17, 29, 0, 1, 2);
+        vfmla_m2(6, 18, 30, 0, 1, 2);
+        vfmla_m2(7, 19, 31, 0, 1, 2);
+
+        vfmla_m2(20, 24, 8, 0, 1, 3);
+        vfmla_m2(21, 25, 9, 0, 1, 3);
+        vfmla_m2(22, 26, 10, 0, 1, 3);
+        vfmla_m2(23, 27, 11, 0, 1, 3);
+    }
+
+    if (k >= 2) {
+        k -= 2;
+        vldr_f64_post_m2(0, 1, a, a1);
+        vldp(28, 29, b, 0); vldp(30, 31, b, 32);
+        b = b + (ldb << 1);
+        vldp(8, 9, b1, 0); vldp(10, 11, b1, 32);
+        b1 = b1 + (ldb << 1);
+
+        vfmla_m2(4, 16, 28, 0, 1, 0); vfmla_m2(5, 17, 29, 0, 1, 0);
+        vfmla_m2(6, 18, 30, 0, 1, 0); vfmla_m2(7, 19, 31, 0, 1, 0);
+        vfmla_m2(20, 24, 8, 0, 1, 1); vfmla_m2(21, 25, 9, 0, 1, 1);
+        vfmla_m2(22, 26, 10, 0, 1, 1); vfmla_m2(23, 27, 11, 0, 1, 1);
+    }
+
+    if (k >= 1) {
+        k -= 1;
+        vldr_f32_post_m2(0, 1, a, a1);
+        vldp(28, 29, b, 0); vldp(30, 31, b, 32);
+        vfmla_m2(4, 16, 28, 0, 1, 0); vfmla_m2(5, 17, 29, 0, 1, 0);
+        vfmla_m2(6, 18, 30, 0, 1, 0); vfmla_m2(7, 19, 31, 0, 1, 0);
+    }
+
+    float *c1 = c + ldc;
+    // Sum Set B (v20-v27) into Set A (v4-v7, v16-v19)
+    vfadd(4, 4, 20); vfadd(5, 5, 21); vfadd(6, 6, 22); vfadd(7, 7, 23);
+    vfadd(16, 16, 24); vfadd(17, 17, 25); vfadd(18, 18, 26); vfadd(19, 19, 27);
+    if (c_state) {
+        vldr(0, c, 0);  vfadd(4, 4, 0); vstr(4, c, 0);
+        vldr(1, c, 16); vfadd(5, 5, 1); vstr(5, c, 16);
+        vldr(2, c, 32); vfadd(6, 6, 2); vstr(6, c, 32);
+        vldr(3, c, 48); vfadd(7, 7, 3); vstr(7, c, 48);
+        vldr(4, c1, 0); vfadd(16, 16, 4); vstr(16, c1, 0);
+        vldr(5, c1, 16);vfadd(17, 17, 5); vstr(17, c1, 16);
+        vldr(6, c1, 32);vfadd(18, 18, 6); vstr(18, c1, 32);
+        vldr(7, c1, 48);vfadd(19, 19, 7); vstr(19, c1, 48);
+    } else {
+        vstr(4, c, 0); vstr(5, c, 16); vstr(6, c, 32); vstr(7, c, 48);
+        vstr(16, c1, 0);vstr(17, c1, 16);vstr(18, c1, 32);vstr(19, c1, 48);
+    }
+}
+
+static inline void micro_kernel_1x16_nn(float *a, float *b, float *c, long int lda, long int ldb, long int ldc, long int k, long int c_state)
+{
+    (void)lda; (void)ldc;
+    float *b1 = b + ldb;
+    float *b2 = b + (ldb << 1);
+    float *b3 = b1 + (ldb << 1);
+    vzero_m8(2, 3, 4, 5, 6, 7, 16, 17);
+    vzero_m8(18, 19, 20, 21, 22, 23, 24, 25);
+
+    if (k >= 8) {
+        k -= 8;
+        vldp_post(0, 1, a);
+        vldp(26, 27, b, 0); vldp(28, 29, b, 32);
+        b = b + (ldb << 2);
+        vldp(30, 31, b1, 0); vldp(8, 9, b1, 32);
+        b1 = b1 + (ldb << 2);
+        while (k >= 8) {
+            k -= 8;
+            // Lane 0: Set A (v2-v5), vn=26~29 from b2
+            vfmla(2, 26, 0, 0); vldr(26, b2, 0);
+            vfmla(3, 27, 0, 0); vldr(27, b2, 16);
+            vfmla(4, 28, 0, 0); vldr(28, b2, 32);
+            vfmla(5, 29, 0, 0); vldr(29, b2, 48);
+            b2 = b2 + (ldb << 2);
+            // Lane 1: Set B (v16-v19), vn=30,31,8,9 from b3
+            vfmla(6, 30, 0, 1); vldr(30, b3, 0);
+            vfmla(7, 31, 0, 1); vldr(31, b3, 16);
+            vfmla(16, 8, 0, 1); vldr(8, b3, 32);
+            vfmla(17, 9, 0, 1); vldr(9, b3, 48);
+            b3 = b3 + (ldb << 2);
+            // Lane 2: Set C (v20-v23), vn=26~29 from b
+            vfmla(18, 26, 0, 2); vldr(26, b, 0);
+            vfmla(19, 27, 0, 2); vldr(27, b, 16);
+            vfmla(20, 28, 0, 2); vldr(28, b, 32);
+            vfmla(21, 29, 0, 2); vldr(29, b, 48);
+            b = b + (ldb << 2);
+            // Lane 3: Set D (v6,v7,v24,v25), vn=30,31,8,9 from b1
+            vfmla(22, 30, 0, 3); vldr(30, b1, 0);
+            vfmla(23, 31, 0, 3); vldr(31, b1, 16);
+            vfmla(24, 8, 0, 3); vldr(8, b1, 32);
+            vfmla(25, 9, 0, 3);
+            vldr_post(0, a);
+            vldr(9, b1, 48);
+            b1 = b1 + (ldb << 2);
+            // Second half: A elements 4-7 from v1
+            // Lane 0: Set A (v2-v5), vn=26~29 from b2
+            vfmla(2, 26, 1, 0); vldr(26, b2, 0);
+            vfmla(3, 27, 1, 0); vldr(27, b2, 16);
+            vfmla(4, 28, 1, 0); vldr(28, b2, 32);
+            vfmla(5, 29, 1, 0); vldr(29, b2, 48);
+            b2 = b2 + (ldb << 2);
+            // Lane 1: Set B (v6,v7,v16,v17), vn=30,31,8,9 from b3
+            vfmla(6, 30, 1, 1); vldr(30, b3, 0);
+            vfmla(7, 31, 1, 1); vldr(31, b3, 16);
+            vfmla(16, 8, 1, 1); vldr(8, b3, 32);
+            vfmla(17, 9, 1, 1); vldr(9, b3, 48);
+            b3 = b3 + (ldb << 2);
+            // Lane 2: Set C (v18-v21), vn=26~29 from b
+            vfmla(18, 26, 1, 2); vldr(26, b, 0);
+            vfmla(19, 27, 1, 2); vldr(27, b, 16);
+            vfmla(20, 28, 1, 2); vldr(28, b, 32);
+            vfmla(21, 29, 1, 2); vldr(29, b, 48);
+            b = b + (ldb << 2);
+            // Lane 3: Set D (v22-v25), vn=30,31,8,9 from b1
+            vfmla(22, 30, 1, 3); vldr(30, b1, 0);
+            vfmla(23, 31, 1, 3); vldr(31, b1, 16);
+            vfmla(24, 8, 1, 3); vldr(8, b1, 32);
+            vfmla(25, 9, 1, 3);
+            vldr_post(1, a);
+            vldr(9, b1, 48);
+            b1 = b1 + (ldb << 2);
+        }
+        // Epilogue Set 1 (matches first half)
+        vfmla(2, 26, 0, 0); vldr(26, b2, 0);
+        vfmla(3, 27, 0, 0); vldr(27, b2, 16);
+        vfmla(4, 28, 0, 0); vldr(28, b2, 32);
+        vfmla(5, 29, 0, 0); vldr(29, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla(6, 30, 0, 1); vldr(30, b3, 0);
+        vfmla(7, 31, 0, 1); vldr(31, b3, 16);
+        vfmla(16, 8, 0, 1); vldr(8, b3, 32);
+        vfmla(17, 9, 0, 1); vldr(9, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla(18, 26, 0, 2); vldr(26, b, 0);
+        vfmla(19, 27, 0, 2); vldr(27, b, 16);
+        vfmla(20, 28, 0, 2); vldr(28, b, 32);
+        vfmla(21, 29, 0, 2); vldr(29, b, 48);
+        b = b + (ldb << 2);
+
+        vfmla(22, 30, 0, 3); vldr(30, b1, 0);
+        vfmla(23, 31, 0, 3); vldr(31, b1, 16);
+        vfmla(24, 8, 0, 3); vldr(8, b1, 32);
+        vfmla(25, 9, 0, 3); vldr(9, b1, 48);
+        b1 = b1 + (ldb << 2);
+        // Epilogue Set 2
+        vfmla(2, 26, 1, 0); vldr(26, b2, 0);
+        vfmla(3, 27, 1, 0); vldr(27, b2, 16);
+        vfmla(4, 28, 1, 0); vldr(28, b2, 32);
+        vfmla(5, 29, 1, 0); vldr(29, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla(6, 30, 1, 1); vldr(30, b3, 0);
+        vfmla(7, 31, 1, 1); vldr(31, b3, 16);
+        vfmla(16, 8, 1, 1); vldr(8, b3, 32);
+        vfmla(17, 9, 1, 1); vldr(9, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla(18, 26, 1, 2);
+        vfmla(19, 27, 1, 2);
+        vfmla(20, 28, 1, 2);
+        vfmla(21, 29, 1, 2);
+
+        vfmla(22, 30, 1, 3);
+        vfmla(23, 31, 1, 3);
+        vfmla(24, 8, 1, 3);
+        vfmla(25, 9, 1, 3);
+    }
+
+    if (k >= 4) {
+        k -= 4;
+        vldr_post(0, a);
+        vldp(26, 27, b, 0); vldp(28, 29, b, 32);
+        b = b + (ldb << 2);
+        vldp(30, 31, b1, 0); vldp(8, 9, b1, 32);
+        b1 = b1 + (ldb << 2);
+
+        vfmla(2, 26, 0, 0); vldr(26, b2, 0);
+        vfmla(3, 27, 0, 0); vldr(27, b2, 16);
+        vfmla(4, 28, 0, 0); vldr(28, b2, 32);
+        vfmla(5, 29, 0, 0); vldr(29, b2, 48);
+        b2 = b2 + (ldb << 2);
+
+        vfmla(6, 30, 0, 1); vldr(30, b3, 0);
+        vfmla(7, 31, 0, 1); vldr(31, b3, 16);
+        vfmla(16, 8, 0, 1); vldr(8, b3, 32);
+        vfmla(17, 9, 0, 1); vldr(9, b3, 48);
+        b3 = b3 + (ldb << 2);
+
+        vfmla(18, 26, 0, 2);
+        vfmla(19, 27, 0, 2);
+        vfmla(20, 28, 0, 2);
+        vfmla(21, 29, 0, 2);
+
+        vfmla(22, 30, 0, 3);
+        vfmla(23, 31, 0, 3);
+        vfmla(24, 8, 0, 3);
+        vfmla(25, 9, 0, 3);
+    }
+
+    if (k >= 2) {
+        k -= 2;
+        vldr_f64_post(0, a);
+        vldp(26, 27, b, 0); vldp(28, 29, b, 32);
+        b = b + (ldb << 1);
+        vldp(30, 31, b1, 0); vldp(8, 9, b1, 32);
+        b1 = b1 + (ldb << 1);
+
+        vfmla(2, 26, 0, 0); vfmla(3, 27, 0, 0);
+        vfmla(4, 28, 0, 0); vfmla(5, 29, 0, 0);
+        vfmla(6, 30, 0, 1); vfmla(7, 31, 0, 1);
+        vfmla(16, 8, 0, 1); vfmla(17, 9, 0, 1);
+    }
+
+    if (k >= 1) {
+        k -= 1;
+        vldr_f32_post(0, a);
+        vldp(26, 27, b, 0); vldp(28, 29, b, 32);
+        vfmla(2, 26, 0, 0); vfmla(3, 27, 0, 0);
+        vfmla(4, 28, 0, 0); vfmla(5, 29, 0, 0);
+    }
+
+    vfadd(2, 2, 6);  vfadd(3, 3, 7);  vfadd(4, 4, 16); vfadd(5, 5, 17);
+    vfadd(2, 2, 18); vfadd(3, 3, 19); vfadd(4, 4, 20); vfadd(5, 5, 21);
+    vfadd(2, 2, 22); vfadd(3, 3, 23); vfadd(4, 4, 24); vfadd(5, 5, 25);
+    if (c_state) {
+        vldr(0, c, 0);  vfadd(2, 2, 0); vstr(2, c, 0);
+        vldr(1, c, 16); vfadd(3, 3, 1); vstr(3, c, 16);
+        vldr(8, c, 32); vfadd(4, 4, 8); vstr(4, c, 32);
+        vldr(9, c, 48); vfadd(5, 5, 9); vstr(5, c, 48);
+    } else {
+        vstr(2, c, 0); vstr(3, c, 16); vstr(4, c, 32); vstr(5, c, 48);
+    }
+}
+
+static inline void micro_kernel_8x8_nn(float *a, float *b, float *c, long int lda, long int ldb, long int ldc, long int k, long int c_state)
+{
+    float *a0 = a;
+    float *a1 = a + lda, *a2 = a + (lda << 1), *a3 = a + lda + (lda << 1);
+    float *a4 = a + (lda << 2), *a5 = a + lda + (lda << 2);
+    float *a6 = a + (lda << 1) + (lda << 2), *a7 = a + lda + (lda << 1) + (lda << 2);
+    vzero_m8(0, 1, 2, 3, 4, 5, 6, 7);
+    vzero_m8(8, 9, 10, 11, 12, 13, 14, 15);
+
+    while (k >= 2) {
+        k -= 2;
+        vldr(16, b, 0); vldr(17, b, 16);
+        b += ldb;
+        vldr(18, b, 0); vldr(19, b, 16);
+        b += ldb;
+
+        vldr_f64_post(20, a0);
+        vfmla(0, 16, 20, 0); vfmla(0, 18, 20, 1);
+        vfmla(1, 17, 20, 0); vfmla(1, 19, 20, 1);
+
+        vldr_f64_post(21, a1);
+        vfmla(2, 16, 21, 0); vfmla(2, 18, 21, 1);
+        vfmla(3, 17, 21, 0); vfmla(3, 19, 21, 1);
+
+        vldr_f64_post(22, a2);
+        vfmla(4, 16, 22, 0); vfmla(4, 18, 22, 1);
+        vfmla(5, 17, 22, 0); vfmla(5, 19, 22, 1);
+
+        vldr_f64_post(23, a3);
+        vfmla(6, 16, 23, 0); vfmla(6, 18, 23, 1);
+        vfmla(7, 17, 23, 0); vfmla(7, 19, 23, 1);
+
+        vldr_f64_post(20, a4);
+        vfmla(8, 16, 20, 0); vfmla(8, 18, 20, 1);
+        vfmla(9, 17, 20, 0); vfmla(9, 19, 20, 1);
+
+        vldr_f64_post(21, a5);
+        vfmla(10, 16, 21, 0); vfmla(10, 18, 21, 1);
+        vfmla(11, 17, 21, 0); vfmla(11, 19, 21, 1);
+
+        vldr_f64_post(22, a6);
+        vfmla(12, 16, 22, 0); vfmla(12, 18, 22, 1);
+        vfmla(13, 17, 22, 0); vfmla(13, 19, 22, 1);
+
+        vldr_f64_post(23, a7);
+        vfmla(14, 16, 23, 0); vfmla(14, 18, 23, 1);
+        vfmla(15, 17, 23, 0); vfmla(15, 19, 23, 1);
+    }
+
+    if (k >= 1) {
+        k -= 1;
+        vldr(16, b, 0); vldr(17, b, 16);
+
+        vldr_f32_post(20, a0);
+        vfmla(0, 16, 20, 0); vfmla(1, 17, 20, 0);
+        vldr_f32_post(21, a1);
+        vfmla(2, 16, 21, 0); vfmla(3, 17, 21, 0);
+        vldr_f32_post(22, a2);
+        vfmla(4, 16, 22, 0); vfmla(5, 17, 22, 0);
+        vldr_f32_post(23, a3);
+        vfmla(6, 16, 23, 0); vfmla(7, 17, 23, 0);
+        vldr_f32_post(20, a4);
+        vfmla(8, 16, 20, 0); vfmla(9, 17, 20, 0);
+        vldr_f32_post(21, a5);
+        vfmla(10, 16, 21, 0); vfmla(11, 17, 21, 0);
+        vldr_f32_post(22, a6);
+        vfmla(12, 16, 22, 0); vfmla(13, 17, 22, 0);
+        vldr_f32_post(23, a7);
+        vfmla(14, 16, 23, 0); vfmla(15, 17, 23, 0);
+    }
+
+    float *c1 = c + ldc, *c2 = c + (ldc << 1), *c3 = c + ldc + (ldc << 1);
+    float *c4 = c + (ldc << 2), *c5 = c + ldc + (ldc << 2);
+    float *c6 = c + (ldc << 1) + (ldc << 2), *c7 = c + ldc + (ldc << 1) + (ldc << 2);
+    if (c_state) {
+        vldr(16, c, 0);  vfadd(0, 0, 16); vstr(0, c, 0);
+        vldr(17, c, 16); vfadd(1, 1, 17); vstr(1, c, 16);
+        vldr(18, c1, 0); vfadd(2, 2, 18); vstr(2, c1, 0);
+        vldr(19, c1, 16);vfadd(3, 3, 19); vstr(3, c1, 16);
+        vldr(20, c2, 0); vfadd(4, 4, 20); vstr(4, c2, 0);
+        vldr(21, c2, 16);vfadd(5, 5, 21); vstr(5, c2, 16);
+        vldr(22, c3, 0); vfadd(6, 6, 22); vstr(6, c3, 0);
+        vldr(23, c3, 16);vfadd(7, 7, 23); vstr(7, c3, 16);
+        vldr(24, c4, 0); vfadd(8, 8, 24); vstr(8, c4, 0);
+        vldr(25, c4, 16);vfadd(9, 9, 25); vstr(9, c4, 16);
+        vldr(26, c5, 0); vfadd(10, 10, 26);vstr(10, c5, 0);
+        vldr(27, c5, 16);vfadd(11, 11, 27);vstr(11, c5, 16);
+        vldr(28, c6, 0); vfadd(12, 12, 28);vstr(12, c6, 0);
+        vldr(29, c6, 16);vfadd(13, 13, 29);vstr(13, c6, 16);
+        vldr(30, c7, 0); vfadd(14, 14, 30);vstr(14, c7, 0);
+        vldr(31, c7, 16);vfadd(15, 15, 31);vstr(15, c7, 16);
+    } else {
+        vstr(0, c, 0); vstr(1, c, 16);
+        vstr(2, c1, 0);vstr(3, c1, 16);
+        vstr(4, c2, 0);vstr(5, c2, 16);
+        vstr(6, c3, 0);vstr(7, c3, 16);
+        vstr(8, c4, 0);vstr(9, c4, 16);
+        vstr(10, c5, 0);vstr(11, c5, 16);
+        vstr(12, c6, 0);vstr(13, c6, 16);
+        vstr(14, c7, 0);vstr(15, c7, 16);
+    }
+}
+
+static inline void micro_kernel_8x2_nn(float *a, float *b, float *c, long int lda, long int ldb, long int ldc, long int k, long int c_state)
+{
+    (void)ldb;
+    float *a0 = a;
+    float *a1 = a + lda, *a2 = a + (lda << 1), *a3 = a + lda + (lda << 1);
+    float *a4 = a + (lda << 2), *a5 = a + lda + (lda << 2);
+    float *a6 = a + (lda << 1) + (lda << 2), *a7 = a + lda + (lda << 1) + (lda << 2);
+    vzero_m8(8, 9, 10, 11, 12, 13, 14, 15);
+    vzero_m8(16, 17, 18, 19, 20, 21, 22, 23);
+
+    if (k >= 8) {
+        k -= 8;
+        vldr_post(24, a0); vldr_post(25, a1); vldr_post(26, a2); vldr_post(27, a3);
+        vldr_post(28, a4); vldr_post(29, a5); vldr_post(30, a6); vldr_post(31, a7);
+        vldr_f64(4, b); vldr_f64(5, b + ldb);
+        vldr_f64(6, b + (ldb << 1)); vldr_f64(7, b + (ldb << 1) + ldb);
+        b += ldb << 2;
+        vzip1_4s(4, 4, 6); vzip1_4s(5, 5, 7);
+        vzip1_4s(0, 4, 5); vzip2_4s(1, 4, 5);
+        vldr_f64(4, b); vldr_f64(5, b + ldb);
+        vldr_f64(6, b + (ldb << 1)); vldr_f64(7, b + (ldb << 1) + ldb);
+        b += ldb << 2;
+        vzip1_4s(4, 4, 6); vzip1_4s(5, 5, 7);
+        vzip1_4s(2, 4, 5); vzip2_4s(3, 4, 5);
+        while (k >= 8) {
+            k -= 8;
+            vfmla_vec(8, 24, 0);  vfmla_vec(9, 24, 1);  vldr_post(24, a0);
+            vfmla_vec(10, 25, 0); vfmla_vec(11, 25, 1); vldr_post(25, a1);
+            vfmla_vec(12, 26, 0); vfmla_vec(13, 26, 1); vldr_post(26, a2);
+            vfmla_vec(14, 27, 0); vfmla_vec(15, 27, 1); vldr_post(27, a3);
+            vfmla_vec(16, 28, 0); vfmla_vec(17, 28, 1); vldr_post(28, a4);
+            vfmla_vec(18, 29, 0); vfmla_vec(19, 29, 1); vldr_post(29, a5);
+            vfmla_vec(20, 30, 0); vfmla_vec(21, 30, 1); vldr_post(30, a6);
+            vfmla_vec(22, 31, 0); vfmla_vec(23, 31, 1); vldr_post(31, a7);
+            vldr_f64(4, b); vldr_f64(5, b + ldb);
+            vldr_f64(6, b + (ldb << 1)); vldr_f64(7, b + (ldb << 1) + ldb);
+            b += ldb << 2;
+            vzip1_4s(4, 4, 6); vzip1_4s(5, 5, 7);
+            vzip1_4s(0, 4, 5); vzip2_4s(1, 4, 5);
+
+            vfmla_vec(8, 24, 2);  vfmla_vec(9, 24, 3);  vldr_post(24, a0);
+            vfmla_vec(10, 25, 2); vfmla_vec(11, 25, 3); vldr_post(25, a1);
+            vfmla_vec(12, 26, 2); vfmla_vec(13, 26, 3); vldr_post(26, a2);
+            vfmla_vec(14, 27, 2); vfmla_vec(15, 27, 3); vldr_post(27, a3);
+            vfmla_vec(16, 28, 2); vfmla_vec(17, 28, 3); vldr_post(28, a4);
+            vfmla_vec(18, 29, 2); vfmla_vec(19, 29, 3); vldr_post(29, a5);
+            vfmla_vec(20, 30, 2); vfmla_vec(21, 30, 3); vldr_post(30, a6);
+            vfmla_vec(22, 31, 2); vfmla_vec(23, 31, 3); vldr_post(31, a7);
+            vldr_f64(4, b); vldr_f64(5, b + ldb);
+            vldr_f64(6, b + (ldb << 1)); vldr_f64(7, b + (ldb << 1) + ldb);
+            b += ldb << 2;
+            vzip1_4s(4, 4, 6); vzip1_4s(5, 5, 7);
+            vzip1_4s(2, 4, 5); vzip2_4s(3, 4, 5);
+        }
+        // Epilogue: always process preloaded data
+        vfmla_vec(8, 24, 0);  vfmla_vec(9, 24, 1);  vldr_post(24, a0);
+        vfmla_vec(10, 25, 0); vfmla_vec(11, 25, 1); vldr_post(25, a1);
+        vfmla_vec(12, 26, 0); vfmla_vec(13, 26, 1); vldr_post(26, a2);
+        vfmla_vec(14, 27, 0); vfmla_vec(15, 27, 1); vldr_post(27, a3);
+        vfmla_vec(16, 28, 0); vfmla_vec(17, 28, 1); vldr_post(28, a4);
+        vfmla_vec(18, 29, 0); vfmla_vec(19, 29, 1); vldr_post(29, a5);
+        vfmla_vec(20, 30, 0); vfmla_vec(21, 30, 1); vldr_post(30, a6);
+        vfmla_vec(22, 31, 0); vfmla_vec(23, 31, 1); vldr_post(31, a7);
+
+        vfmla_vec(8, 24, 2);  vfmla_vec(9, 24, 3);
+        vfmla_vec(10, 25, 2); vfmla_vec(11, 25, 3);
+        vfmla_vec(12, 26, 2); vfmla_vec(13, 26, 3);
+        vfmla_vec(14, 27, 2); vfmla_vec(15, 27, 3);
+        vfmla_vec(16, 28, 2); vfmla_vec(17, 28, 3);
+        vfmla_vec(18, 29, 2); vfmla_vec(19, 29, 3);
+        vfmla_vec(20, 30, 2); vfmla_vec(21, 30, 3);
+        vfmla_vec(22, 31, 2); vfmla_vec(23, 31, 3);
+    }
+    if (k >= 4) {
+        k -= 4;
+        vldr_f64(4, b); vldr_f64(5, b + ldb);
+        vldr_f64(6, b + (ldb << 1)); vldr_f64(7, b + (ldb << 1) + ldb);
+        b += ldb << 2;
+        vzip1_4s(4, 4, 6); vzip1_4s(5, 5, 7);
+        vzip1_4s(0, 4, 5); vzip2_4s(1, 4, 5);
+
+        vldr_post(24, a0); vldr_post(25, a1); vldr_post(26, a2); vldr_post(27, a3);
+        vldr_post(28, a4); vldr_post(29, a5); vldr_post(30, a6); vldr_post(31, a7);
+
+        vfmla_vec(8, 24, 0);  vfmla_vec(9, 24, 1);
+        vfmla_vec(10, 25, 0); vfmla_vec(11, 25, 1);
+        vfmla_vec(12, 26, 0); vfmla_vec(13, 26, 1);
+        vfmla_vec(14, 27, 0); vfmla_vec(15, 27, 1);
+        vfmla_vec(16, 28, 0); vfmla_vec(17, 28, 1);
+        vfmla_vec(18, 29, 0); vfmla_vec(19, 29, 1);
+        vfmla_vec(20, 30, 0); vfmla_vec(21, 30, 1);
+        vfmla_vec(22, 31, 0); vfmla_vec(23, 31, 1);
+    }
+    if (k >= 2) {
+        k -= 2;
+        vzero(0);
+        vld1s(0, 0, b);
+        vld1s(0, 1, b + ldb);
+        vzero(1);
+        vld1s(1, 0, b + 1);
+        vld1s(1, 1, b + ldb + 1);
+        b += ldb << 1;
+        vldr_f32_post(2, a0);
+        vldr_f32_post(3, a0);
+        vins_s1(2, 3, 0);
+        vfmla_vec(8, 2, 0);
+        vfmla_vec(9, 2, 1);
+        vldr_f32_post(2, a1); vldr_f32_post(3, a1); vins_s1(2, 3, 0);
+        vfmla_vec(10, 2, 0); vfmla_vec(11, 2, 1);
+        vldr_f32_post(2, a2); vldr_f32_post(3, a2); vins_s1(2, 3, 0);
+        vfmla_vec(12, 2, 0); vfmla_vec(13, 2, 1);
+        vldr_f32_post(2, a3); vldr_f32_post(3, a3); vins_s1(2, 3, 0);
+        vfmla_vec(14, 2, 0); vfmla_vec(15, 2, 1);
+        vldr_f32_post(2, a4); vldr_f32_post(3, a4); vins_s1(2, 3, 0);
+        vfmla_vec(16, 2, 0); vfmla_vec(17, 2, 1);
+        vldr_f32_post(2, a5); vldr_f32_post(3, a5); vins_s1(2, 3, 0);
+        vfmla_vec(18, 2, 0); vfmla_vec(19, 2, 1);
+        vldr_f32_post(2, a6); vldr_f32_post(3, a6); vins_s1(2, 3, 0);
+        vfmla_vec(20, 2, 0); vfmla_vec(21, 2, 1);
+        vldr_f32_post(2, a7); vldr_f32_post(3, a7); vins_s1(2, 3, 0);
+        vfmla_vec(22, 2, 0); vfmla_vec(23, 2, 1);
+    }
+    if (k >= 1) {
+        k -= 1;
+        vld1s(0, 0, b); vzero(1); vld1s(1, 0, b + 1); b += ldb;
+        vldr_f32_post(2, a0);
+        vfmla_vec(8, 2, 0); vfmla_vec(9, 2, 1);
+        vldr_f32_post(2, a1);
+        vfmla_vec(10, 2, 0); vfmla_vec(11, 2, 1);
+        vldr_f32_post(2, a2);
+        vfmla_vec(12, 2, 0); vfmla_vec(13, 2, 1);
+        vldr_f32_post(2, a3);
+        vfmla_vec(14, 2, 0); vfmla_vec(15, 2, 1);
+        vldr_f32_post(2, a4);
+        vfmla_vec(16, 2, 0); vfmla_vec(17, 2, 1);
+        vldr_f32_post(2, a5);
+        vfmla_vec(18, 2, 0); vfmla_vec(19, 2, 1);
+        vldr_f32_post(2, a6);
+        vfmla_vec(20, 2, 0); vfmla_vec(21, 2, 1);
+        vldr_f32_post(2, a7);
+        vfmla_vec(22, 2, 0); vfmla_vec(23, 2, 1);
+    }
+
+    vhsum(8);  vhsum(9);  vhsum(10); vhsum(11);
+    vhsum(12); vhsum(13); vhsum(14); vhsum(15);
+    vhsum(16); vhsum(17); vhsum(18); vhsum(19);
+    vhsum(20); vhsum(21); vhsum(22); vhsum(23);
+
+    float *c1 = c + ldc, *c2 = c + (ldc << 1), *c3 = c + ldc + (ldc << 1);
+    float *c4 = c + (ldc << 2), *c5 = c + ldc + (ldc << 2);
+    float *c6 = c + (ldc << 1) + (ldc << 2), *c7 = c + ldc + (ldc << 1) + (ldc << 2);
+    if (c_state) {
+        vld1s(0,0,c);   vfadd_f32(8,0);  vst1s(8,0,c);
+        vld1s(0,0,c+1); vfadd_f32(9,0);  vst1s(9,0,c+1);
+        vld1s(0,0,c1);  vfadd_f32(10,0); vst1s(10,0,c1);
+        vld1s(0,0,c1+1);vfadd_f32(11,0); vst1s(11,0,c1+1);
+        vld1s(0,0,c2);  vfadd_f32(12,0); vst1s(12,0,c2);
+        vld1s(0,0,c2+1);vfadd_f32(13,0); vst1s(13,0,c2+1);
+        vld1s(0,0,c3);  vfadd_f32(14,0); vst1s(14,0,c3);
+        vld1s(0,0,c3+1);vfadd_f32(15,0); vst1s(15,0,c3+1);
+        vld1s(0,0,c4);  vfadd_f32(16,0); vst1s(16,0,c4);
+        vld1s(0,0,c4+1);vfadd_f32(17,0); vst1s(17,0,c4+1);
+        vld1s(0,0,c5);  vfadd_f32(18,0); vst1s(18,0,c5);
+        vld1s(0,0,c5+1);vfadd_f32(19,0); vst1s(19,0,c5+1);
+        vld1s(0,0,c6);  vfadd_f32(20,0); vst1s(20,0,c6);
+        vld1s(0,0,c6+1);vfadd_f32(21,0); vst1s(21,0,c6+1);
+        vld1s(0,0,c7);  vfadd_f32(22,0); vst1s(22,0,c7);
+        vld1s(0,0,c7+1);vfadd_f32(23,0); vst1s(23,0,c7+1);
+    } else {
+        vst1s(8,0,c);vst1s(9,0,c+1);vst1s(10,0,c1);vst1s(11,0,c1+1);
+        vst1s(12,0,c2);vst1s(13,0,c2+1);vst1s(14,0,c3);vst1s(15,0,c3+1);
+        vst1s(16,0,c4);vst1s(17,0,c4+1);vst1s(18,0,c5);vst1s(19,0,c5+1);
+        vst1s(20,0,c6);vst1s(21,0,c6+1);vst1s(22,0,c7);vst1s(23,0,c7+1);
+    }
+}
+
+static inline void micro_kernel_8x1_nn(float *a, float *b, float *c, long int lda, long int ldb, long int ldc, long int k, long int c_state)
+{
+    (void)ldb;
+    float *a0 = a;
+    float *a1 = a + lda, *a2 = a + (lda << 1), *a3 = a + lda + (lda << 1);
+    float *a4 = a + (lda << 2), *a5 = a + lda + (lda << 2);
+    float *a6 = a + (lda << 1) + (lda << 2), *a7 = a + lda + (lda << 1) + (lda << 2);
+    vzero_m8(0, 1, 2, 3, 4, 5, 6, 7);
+    vzero_m8(8, 9, 10, 11, 12, 13, 14, 15);
+
+    if (k >= 16) {
+        k -= 16;
+        vldp_post(24, 25, b); vldp_post(26, 27, b);
+        vldp_post(16, 17, a0); vldp_post(18, 19, a1);
+        vldp_post(20, 21, a2); vldp_post(22, 23, a3);
+        while (k >= 16) {
+            k -= 16;
+            vfmla_vec(0, 16, 24); vfmla_vec(8, 17, 25); vldp_post(16, 17, a4);
+            vfmla_vec(1, 18, 24); vfmla_vec(9, 19, 25); vldp_post(18, 19, a5);
+            vfmla_vec(2, 20, 24); vfmla_vec(10, 21, 25); vldp_post(20, 21, a6);
+            vfmla_vec(3, 22, 24); vfmla_vec(11, 23, 25); vldp_post(22, 23, a7);
+            vfmla_vec(4, 16, 24);  vfmla_vec(12, 17, 25); vldp_post(16, 17, a0);
+            vfmla_vec(5, 18, 24);  vfmla_vec(13, 19, 25); vldp_post(18, 19, a1);
+            vfmla_vec(6, 20, 24);  vfmla_vec(14, 21, 25); vldp_post(20, 21, a2);
+            vfmla_vec(7, 22, 24);  vfmla_vec(15, 23, 25); vldp_post(22, 23, a3);
+            vfmla_vec(0, 16, 26); vfmla_vec(8, 17, 27); vldp_post(16, 17, a4);
+            vfmla_vec(1, 18, 26); vfmla_vec(9, 19, 27); vldp_post(18, 19, a5);
+            vfmla_vec(2, 20, 26); vfmla_vec(10, 21, 27); vldp_post(20, 21, a6);
+            vfmla_vec(3, 22, 26); vfmla_vec(11, 23, 27); vldp_post(22, 23, a7);
+            vfmla_vec(4, 16, 26);  vfmla_vec(12, 17, 27); vldp_post(16, 17, a0);
+            vfmla_vec(5, 18, 26);  vfmla_vec(13, 19, 27); vldp_post(18, 19, a1);
+            vfmla_vec(6, 20, 26);  vfmla_vec(14, 21, 27); vldp_post(20, 21, a2);
+            vfmla_vec(7, 22, 26);  vfmla_vec(15, 23, 27); vldp_post(22, 23, a3);
+            vldp_post(24, 25, b); vldp_post(26, 27, b);
+        }
+        vfmla_vec(0, 16, 24); vfmla_vec(8, 17, 25); vldp_post(16, 17, a4);
+        vfmla_vec(1, 18, 24); vfmla_vec(9, 19, 25); vldp_post(18, 19, a5);
+        vfmla_vec(2, 20, 24); vfmla_vec(10, 21, 25); vldp_post(20, 21, a6);
+        vfmla_vec(3, 22, 24); vfmla_vec(11, 23, 25); vldp_post(22, 23, a7);
+        vfmla_vec(4, 16, 24);  vfmla_vec(12, 17, 25); vldp_post(16, 17, a0);
+        vfmla_vec(5, 18, 24);  vfmla_vec(13, 19, 25); vldp_post(18, 19, a1);
+        vfmla_vec(6, 20, 24);  vfmla_vec(14, 21, 25); vldp_post(20, 21, a2);
+        vfmla_vec(7, 22, 24);  vfmla_vec(15, 23, 25); vldp_post(22, 23, a3);
+        vfmla_vec(0, 16, 26); vfmla_vec(8, 17, 27); vldp_post(16, 17, a4);
+        vfmla_vec(1, 18, 26); vfmla_vec(9, 19, 27); vldp_post(18, 19, a5);
+        vfmla_vec(2, 20, 26); vfmla_vec(10, 21, 27); vldp_post(20, 21, a6);
+        vfmla_vec(3, 22, 26); vfmla_vec(11, 23, 27); vldp_post(22, 23, a7);
+        vfmla_vec(4, 16, 26);  vfmla_vec(12, 17, 27);
+        vfmla_vec(5, 18, 26);  vfmla_vec(13, 19, 27);
+        vfmla_vec(6, 20, 26);  vfmla_vec(14, 21, 27);
+        vfmla_vec(7, 22, 26);  vfmla_vec(15, 23, 27);
+    }
+
+    if (k >= 8) {
+        k -= 8;
+        vldp_post(24, 25, b);
+        vldp_post(16, 17, a0); vldp_post(18, 19, a1);
+        vldp_post(20, 21, a2); vldp_post(22, 23, a3);
+        vfmla_vec(0, 16, 24); vfmla_vec(8, 17, 25); vldp_post(16, 17, a4);
+        vfmla_vec(1, 18, 24); vfmla_vec(9, 19, 25); vldp_post(18, 19, a5);
+        vfmla_vec(2, 20, 24); vfmla_vec(10, 21, 25); vldp_post(20, 21, a6);
+        vfmla_vec(3, 22, 24); vfmla_vec(11, 23, 25); vldp_post(22, 23, a7);
+        vfmla_vec(4, 16, 24);  vfmla_vec(12, 17, 25);
+        vfmla_vec(5, 18, 24);  vfmla_vec(13, 19, 25);
+        vfmla_vec(6, 20, 24);  vfmla_vec(14, 21, 25);
+        vfmla_vec(7, 22, 24);  vfmla_vec(15, 23, 25);
+    }
+
+    if (k >= 4) {
+        k -= 4;
+        vldr_post(24, b);
+        vldr_post(16, a0); vfmla_vec(0, 16, 24);
+        vldr_post(17, a1); vfmla_vec(1, 17, 24);
+        vldr_post(18, a2); vfmla_vec(2, 18, 24);
+        vldr_post(19, a3); vfmla_vec(3, 19, 24);
+        vldr_post(20, a4); vfmla_vec(4, 20, 24);
+        vldr_post(21, a5); vfmla_vec(5, 21, 24);
+        vldr_post(22, a6); vfmla_vec(6, 22, 24);
+        vldr_post(23, a7); vfmla_vec(7, 23, 24);
+    }
+
+    if (k >= 2) {
+        k -= 2;
+        vzero(24); vldr_f64_post(24, b);
+        vldr_f64_post(16, a0); vfmla_vec(0, 16, 24);
+        vldr_f64_post(17, a1); vfmla_vec(1, 17, 24);
+        vldr_f64_post(18, a2); vfmla_vec(2, 18, 24);
+        vldr_f64_post(19, a3); vfmla_vec(3, 19, 24);
+        vldr_f64_post(20, a4); vfmla_vec(4, 20, 24);
+        vldr_f64_post(21, a5); vfmla_vec(5, 21, 24);
+        vldr_f64_post(22, a6); vfmla_vec(6, 22, 24);
+        vldr_f64_post(23, a7); vfmla_vec(7, 23, 24);
+    }
+
+    if (k >= 1) {
+        k -= 1;
+        vzero(24); vldr_f32_post(24, b);
+        vldr_f32_post(16, a0); vfmla_vec(0, 16, 24);
+        vldr_f32_post(17, a1); vfmla_vec(1, 17, 24);
+        vldr_f32_post(18, a2); vfmla_vec(2, 18, 24);
+        vldr_f32_post(19, a3); vfmla_vec(3, 19, 24);
+        vldr_f32_post(20, a4); vfmla_vec(4, 20, 24);
+        vldr_f32_post(21, a5); vfmla_vec(5, 21, 24);
+        vldr_f32_post(22, a6); vfmla_vec(6, 22, 24);
+        vldr_f32_post(23, a7); vfmla_vec(7, 23, 24);
+    }
+
+    vfadd(0, 0, 8);  vfadd(1, 1, 9);  vfadd(2, 2, 10);  vfadd(3, 3, 11);
+    vfadd(4, 4, 12); vfadd(5, 5, 13); vfadd(6, 6, 14); vfadd(7, 7, 15);
+
+    vhsum(0); vhsum(1); vhsum(2); vhsum(3);
+    vhsum(4); vhsum(5); vhsum(6); vhsum(7);
+
+    float *c1 = c + ldc, *c2 = c + (ldc << 1), *c3 = c + ldc + (ldc << 1);
+    float *c4 = c + (ldc << 2), *c5 = c + ldc + (ldc << 2);
+    float *c6 = c + (ldc << 1) + (ldc << 2), *c7 = c + ldc + (ldc << 1) + (ldc << 2);
+    if (c_state) {
+        vld1s(8,0,c);  vfadd_f32(0,8);vst1s(0,0,c);
+        vld1s(8,0,c1); vfadd_f32(1,8);vst1s(1,0,c1);
+        vld1s(8,0,c2); vfadd_f32(2,8);vst1s(2,0,c2);
+        vld1s(8,0,c3); vfadd_f32(3,8);vst1s(3,0,c3);
+        vld1s(8,0,c4); vfadd_f32(4,8);vst1s(4,0,c4);
+        vld1s(8,0,c5); vfadd_f32(5,8);vst1s(5,0,c5);
+        vld1s(8,0,c6); vfadd_f32(6,8);vst1s(6,0,c6);
+        vld1s(8,0,c7); vfadd_f32(7,8);vst1s(7,0,c7);
+    } else {
+        vst1s(0,0,c);vst1s(1,0,c1);vst1s(2,0,c2);vst1s(3,0,c3);
+        vst1s(4,0,c4);vst1s(5,0,c5);vst1s(6,0,c6);vst1s(7,0,c7);
+    }
+}
+
+static inline void micro_kernel_8x1_nn_stride(float *a, float *b, float *c, long int lda, long int ldb, long int ldc, long int k, long int c_state)
+{
+    (void)ldc;
+    float *a0 = a;
+    float *a1 = a + lda, *a2 = a + (lda << 1), *a3 = a + lda + (lda << 1);
+    float *a4 = a + (lda << 2), *a5 = a + lda + (lda << 2);
+    float *a6 = a + (lda << 1) + (lda << 2), *a7 = a + lda + (lda << 1) + (lda << 2);
+    vzero_m8(0, 1, 2, 3, 4, 5, 6, 7);
+    vzero_m8(8, 9, 10, 11, 12, 13, 14, 15);
+
+    if (k >= 16) {
+        k -= 16;
+        vld1s(24, 0, b); vld1s(24, 1, b + ldb);
+        vld1s(24, 2, b + (ldb << 1)); vld1s(24, 3, b + (ldb << 1) + ldb);
+        vld1s(25, 0, b + (ldb << 2)); vld1s(25, 1, b + (ldb << 2) + ldb);
+        vld1s(25, 2, b + (ldb << 2) + (ldb << 1));
+        vld1s(25, 3, b + (ldb << 2) + (ldb << 1) + ldb);
+        b += ldb << 3;
+        vld1s(26, 0, b); vld1s(26, 1, b + ldb);
+        vld1s(26, 2, b + (ldb << 1)); vld1s(26, 3, b + (ldb << 1) + ldb);
+        vld1s(27, 0, b + (ldb << 2)); vld1s(27, 1, b + (ldb << 2) + ldb);
+        vld1s(27, 2, b + (ldb << 2) + (ldb << 1));
+        vld1s(27, 3, b + (ldb << 2) + (ldb << 1) + ldb);
+        b += ldb << 3;
+
+        vldp_post(16, 17, a0); vldp_post(18, 19, a1);
+        vldp_post(20, 21, a2); vldp_post(22, 23, a3);
+        while (k >= 16) {
+            k -= 16;
+            vfmla_vec(0, 16, 24); vfmla_vec(8, 17, 25); vldp_post(16, 17, a4);
+            vfmla_vec(1, 18, 24); vfmla_vec(9, 19, 25); vldp_post(18, 19, a5);
+            vfmla_vec(2, 20, 24); vfmla_vec(10, 21, 25); vldp_post(20, 21, a6);
+            vfmla_vec(3, 22, 24); vfmla_vec(11, 23, 25); vldp_post(22, 23, a7);
+            vfmla_vec(4, 16, 24);  vfmla_vec(12, 17, 25); vldp_post(16, 17, a0);
+            vfmla_vec(5, 18, 24);  vfmla_vec(13, 19, 25); vldp_post(18, 19, a1);
+            vfmla_vec(6, 20, 24);  vfmla_vec(14, 21, 25); vldp_post(20, 21, a2);
+            vfmla_vec(7, 22, 24);  vfmla_vec(15, 23, 25); vldp_post(22, 23, a3);
+            vfmla_vec(0, 16, 26); vfmla_vec(8, 17, 27); vldp_post(16, 17, a4);
+            vfmla_vec(1, 18, 26); vfmla_vec(9, 19, 27); vldp_post(18, 19, a5);
+            vfmla_vec(2, 20, 26); vfmla_vec(10, 21, 27); vldp_post(20, 21, a6);
+            vfmla_vec(3, 22, 26); vfmla_vec(11, 23, 27); vldp_post(22, 23, a7);
+            vfmla_vec(4, 16, 26);  vfmla_vec(12, 17, 27); vldp_post(16, 17, a0);
+            vfmla_vec(5, 18, 26);  vfmla_vec(13, 19, 27); vldp_post(18, 19, a1);
+            vfmla_vec(6, 20, 26);  vfmla_vec(14, 21, 27); vldp_post(20, 21, a2);
+            vfmla_vec(7, 22, 26);  vfmla_vec(15, 23, 27); vldp_post(22, 23, a3);
+            vld1s(24, 0, b); vld1s(24, 1, b + ldb);
+            vld1s(24, 2, b + (ldb << 1)); vld1s(24, 3, b + (ldb << 1) + ldb);
+            vld1s(25, 0, b + (ldb << 2)); vld1s(25, 1, b + (ldb << 2) + ldb);
+            vld1s(25, 2, b + (ldb << 2) + (ldb << 1));
+            vld1s(25, 3, b + (ldb << 2) + (ldb << 1) + ldb);
+            b += ldb << 3;
+            vld1s(26, 0, b); vld1s(26, 1, b + ldb);
+            vld1s(26, 2, b + (ldb << 1)); vld1s(26, 3, b + (ldb << 1) + ldb);
+            vld1s(27, 0, b + (ldb << 2)); vld1s(27, 1, b + (ldb << 2) + ldb);
+            vld1s(27, 2, b + (ldb << 2) + (ldb << 1));
+            vld1s(27, 3, b + (ldb << 2) + (ldb << 1) + ldb);
+            b += ldb << 3;
+        }
+        vfmla_vec(0, 16, 24); vfmla_vec(8, 17, 25); vldp_post(16, 17, a4);
+        vfmla_vec(1, 18, 24); vfmla_vec(9, 19, 25); vldp_post(18, 19, a5);
+        vfmla_vec(2, 20, 24); vfmla_vec(10, 21, 25); vldp_post(20, 21, a6);
+        vfmla_vec(3, 22, 24); vfmla_vec(11, 23, 25); vldp_post(22, 23, a7);
+        vfmla_vec(4, 16, 24);  vfmla_vec(12, 17, 25); vldp_post(16, 17, a0);
+        vfmla_vec(5, 18, 24);  vfmla_vec(13, 19, 25); vldp_post(18, 19, a1);
+        vfmla_vec(6, 20, 24);  vfmla_vec(14, 21, 25); vldp_post(20, 21, a2);
+        vfmla_vec(7, 22, 24);  vfmla_vec(15, 23, 25); vldp_post(22, 23, a3);
+        vfmla_vec(0, 16, 26); vfmla_vec(8, 17, 27); vldp_post(16, 17, a4);
+        vfmla_vec(1, 18, 26); vfmla_vec(9, 19, 27); vldp_post(18, 19, a5);
+        vfmla_vec(2, 20, 26); vfmla_vec(10, 21, 27); vldp_post(20, 21, a6);
+        vfmla_vec(3, 22, 26); vfmla_vec(11, 23, 27); vldp_post(22, 23, a7);
+        vfmla_vec(4, 16, 26);  vfmla_vec(12, 17, 27);
+        vfmla_vec(5, 18, 26);  vfmla_vec(13, 19, 27);
+        vfmla_vec(6, 20, 26);  vfmla_vec(14, 21, 27);
+        vfmla_vec(7, 22, 26);  vfmla_vec(15, 23, 27);
+    }
+
+    if (k >= 8) {
+        k -= 8;
+        vld1s(24, 0, b); vld1s(24, 1, b + ldb);
+        vld1s(24, 2, b + (ldb << 1)); vld1s(24, 3, b + (ldb << 1) + ldb);
+        vld1s(25, 0, b + (ldb << 2)); vld1s(25, 1, b + (ldb << 2) + ldb);
+        vld1s(25, 2, b + (ldb << 2) + (ldb << 1));
+        vld1s(25, 3, b + (ldb << 2) + (ldb << 1) + ldb);
+        b += ldb << 3;
+        vldp_post(16, 17, a0); vldp_post(18, 19, a1);
+        vldp_post(20, 21, a2); vldp_post(22, 23, a3);
+        vfmla_vec(0, 16, 24); vfmla_vec(8, 17, 25); vldp_post(16, 17, a4);
+        vfmla_vec(1, 18, 24); vfmla_vec(9, 19, 25); vldp_post(18, 19, a5);
+        vfmla_vec(2, 20, 24); vfmla_vec(10, 21, 25); vldp_post(20, 21, a6);
+        vfmla_vec(3, 22, 24); vfmla_vec(11, 23, 25); vldp_post(22, 23, a7);
+        vfmla_vec(4, 16, 24);  vfmla_vec(12, 17, 25);
+        vfmla_vec(5, 18, 24);  vfmla_vec(13, 19, 25);
+        vfmla_vec(6, 20, 24);  vfmla_vec(14, 21, 25);
+        vfmla_vec(7, 22, 24);  vfmla_vec(15, 23, 25);
+    }
+
+    if (k >= 4) {
+        k -= 4;
+        vld1s(24, 0, b); vld1s(24, 1, b + ldb);
+        vld1s(24, 2, b + (ldb << 1)); vld1s(24, 3, b + (ldb << 1) + ldb);
+        b += ldb << 2;
+        vldr_post(16, a0); vfmla_vec(0, 16, 24);
+        vldr_post(17, a1); vfmla_vec(1, 17, 24);
+        vldr_post(18, a2); vfmla_vec(2, 18, 24);
+        vldr_post(19, a3); vfmla_vec(3, 19, 24);
+        vldr_post(20, a4); vfmla_vec(4, 20, 24);
+        vldr_post(21, a5); vfmla_vec(5, 21, 24);
+        vldr_post(22, a6); vfmla_vec(6, 22, 24);
+        vldr_post(23, a7); vfmla_vec(7, 23, 24);
+    }
+
+    if (k >= 2) {
+        k -= 2;
+        vzero(24); vld1s(24, 0, b); vld1s(24, 1, b + ldb);
+        b += ldb << 1;
+        vldr_f64_post(16, a0); vfmla_vec(0, 16, 24);
+        vldr_f64_post(17, a1); vfmla_vec(1, 17, 24);
+        vldr_f64_post(18, a2); vfmla_vec(2, 18, 24);
+        vldr_f64_post(19, a3); vfmla_vec(3, 19, 24);
+        vldr_f64_post(20, a4); vfmla_vec(4, 20, 24);
+        vldr_f64_post(21, a5); vfmla_vec(5, 21, 24);
+        vldr_f64_post(22, a6); vfmla_vec(6, 22, 24);
+        vldr_f64_post(23, a7); vfmla_vec(7, 23, 24);
+    }
+
+    if (k >= 1) {
+        k -= 1;
+        vzero(24); vld1s(24, 0, b);
+        b += ldb;
+        vldr_f32_post(16, a0); vfmla_vec(0, 16, 24);
+        vldr_f32_post(17, a1); vfmla_vec(1, 17, 24);
+        vldr_f32_post(18, a2); vfmla_vec(2, 18, 24);
+        vldr_f32_post(19, a3); vfmla_vec(3, 19, 24);
+        vldr_f32_post(20, a4); vfmla_vec(4, 20, 24);
+        vldr_f32_post(21, a5); vfmla_vec(5, 21, 24);
+        vldr_f32_post(22, a6); vfmla_vec(6, 22, 24);
+        vldr_f32_post(23, a7); vfmla_vec(7, 23, 24);
+    }
+
+    vfadd(0, 0, 8);  vfadd(1, 1, 9);  vfadd(2, 2, 10);  vfadd(3, 3, 11);
+    vfadd(4, 4, 12); vfadd(5, 5, 13); vfadd(6, 6, 14); vfadd(7, 7, 15);
+
+    vhsum(0); vhsum(1); vhsum(2); vhsum(3);
+    vhsum(4); vhsum(5); vhsum(6); vhsum(7);
+
+    float *c1 = c + ldc, *c2 = c + (ldc << 1), *c3 = c + ldc + (ldc << 1);
+    float *c4 = c + (ldc << 2), *c5 = c + ldc + (ldc << 2);
+    float *c6 = c + (ldc << 1) + (ldc << 2), *c7 = c + ldc + (ldc << 1) + (ldc << 2);
+    if (c_state) {
+        vld1s(16,0,c);  vfadd_f32(0,16);vst1s(0,0,c);
+        vld1s(16,0,c1); vfadd_f32(1,16);vst1s(1,0,c1);
+        vld1s(16,0,c2); vfadd_f32(2,16);vst1s(2,0,c2);
+        vld1s(16,0,c3); vfadd_f32(3,16);vst1s(3,0,c3);
+        vld1s(16,0,c4); vfadd_f32(4,16);vst1s(4,0,c4);
+        vld1s(16,0,c5); vfadd_f32(5,16);vst1s(5,0,c5);
+        vld1s(16,0,c6); vfadd_f32(6,16);vst1s(6,0,c6);
+        vld1s(16,0,c7); vfadd_f32(7,16);vst1s(7,0,c7);
+    } else {
+        vst1s(0,0,c);vst1s(1,0,c1);vst1s(2,0,c2);vst1s(3,0,c3);
+        vst1s(4,0,c4);vst1s(5,0,c5);vst1s(6,0,c6);vst1s(7,0,c7);
+    }
+}
+
+static inline void micro_kernel_4x4_nn(float *a, float *b, float *c, long int lda, long int ldb, long int ldc, long int k, long int c_state)
+{
+    float *a0 = a, *a1 = a + lda, *a2 = a + (lda << 1), *a3 = a + lda + (lda << 1);
+    float *b0 = b, *b1 = b + ldb, *b2 = b + (ldb << 1), *b3 = b + ldb + (ldb << 1);
+    vzero_m8(0, 1, 2, 3, 4, 5, 6, 7);
+    vzero_m8(8, 9, 10, 11, 12, 13, 14, 15);
+
+    if (k >= 8) {
+        k -= 8;
+        vldp_post_m4(24, 25, 26, 27, 28, 29, 30, 31, a0, a1, a2, a3);
+        vldr(16, b0, 0); b0 += ldb << 2;
+        vldr(17, b1, 0); b1 += ldb << 2;
+        vldr(18, b2, 0); b2 += ldb << 2;
+        vldr(19, b3, 0); b3 += ldb << 2;
+        vldr(20, b0, 0); b0 += ldb << 2;
+        vldr(21, b1, 0); b1 += ldb << 2;
+        vldr(22, b2, 0); b2 += ldb << 2;
+        vldr(23, b3, 0); b3 += ldb << 2;
+        while (k >= 8) {
+            k -= 8;
+            vfmla(0, 16, 24, 0); vfmla(1, 17, 24, 1);
+            vfmla(2, 18, 24, 2); vfmla(3, 19, 24, 3);
+            vldr_post(24, a0);
+            vfmla(4, 16, 25, 0); vfmla(5, 17, 25, 1);
+            vfmla(6, 18, 25, 2); vfmla(7, 19, 25, 3);
+            vldr_post(25, a1);
+            vfmla(8, 16, 26, 0);  vfmla(9, 17, 26, 1);
+            vfmla(10, 18, 26, 2); vfmla(11, 19, 26, 3);
+            vldr_post(26, a2);
+            vfmla(12, 16, 27, 0); vfmla(13, 17, 27, 1);
+            vfmla(14, 18, 27, 2); vfmla(15, 19, 27, 3);
+            vldr_post(27, a3);
+            vldr(16, b0, 0); b0 += ldb << 2;
+            vldr(17, b1, 0); b1 += ldb << 2;
+            vldr(18, b2, 0); b2 += ldb << 2;
+            vldr(19, b3, 0); b3 += ldb << 2;
+
+            vfmla(0, 20, 28, 0); vfmla(1, 21, 28, 1);
+            vfmla(2, 22, 28, 2); vfmla(3, 23, 28, 3);
+            vldr_post(28, a0);
+            vfmla(4, 20, 29, 0); vfmla(5, 21, 29, 1);
+            vfmla(6, 22, 29, 2); vfmla(7, 23, 29, 3);
+            vldr_post(29, a1);
+            vfmla(8, 20, 30, 0);  vfmla(9, 21, 30, 1);
+            vfmla(10, 22, 30, 2); vfmla(11, 23, 30, 3);
+            vldr_post(30, a2);
+            vfmla(12, 20, 31, 0); vfmla(13, 21, 31, 1);
+            vfmla(14, 22, 31, 2); vfmla(15, 23, 31, 3);
+            vldr_post(31, a3);
+            vldr(20, b0, 0); b0 += ldb << 2;
+            vldr(21, b1, 0); b1 += ldb << 2;
+            vldr(22, b2, 0); b2 += ldb << 2;
+            vldr(23, b3, 0); b3 += ldb << 2;
+        }
+        // Epilogue first group: A[0-3] (v24-v27) + B[0-3] (v16-v19)
+        vfmla(0, 16, 24, 0); vfmla(1, 17, 24, 1);
+        vfmla(2, 18, 24, 2); vfmla(3, 19, 24, 3);
+        vfmla(4, 16, 25, 0); vfmla(5, 17, 25, 1);
+        vfmla(6, 18, 25, 2); vfmla(7, 19, 25, 3);
+        vfmla(8, 16, 26, 0);  vfmla(9, 17, 26, 1);
+        vfmla(10, 18, 26, 2); vfmla(11, 19, 26, 3);
+        vfmla(12, 16, 27, 0); vfmla(13, 17, 27, 1);
+        vfmla(14, 18, 27, 2); vfmla(15, 19, 27, 3);
+        // Epilogue second group: A[4-7] (v28-v31) + B[4-7] (v20-v23)
+        vfmla(0, 20, 28, 0); vfmla(1, 21, 28, 1);
+        vfmla(2, 22, 28, 2); vfmla(3, 23, 28, 3);
+        vfmla(4, 20, 29, 0); vfmla(5, 21, 29, 1);
+        vfmla(6, 22, 29, 2); vfmla(7, 23, 29, 3);
+        vfmla(8, 20, 30, 0);  vfmla(9, 21, 30, 1);
+        vfmla(10, 22, 30, 2); vfmla(11, 23, 30, 3);
+        vfmla(12, 20, 31, 0); vfmla(13, 21, 31, 1);
+        vfmla(14, 22, 31, 2); vfmla(15, 23, 31, 3);
+    }
+
+    if (k >= 4) {
+        k -= 4;
+        vldr_post_m4(16, 17, 18, 19, a0, a1, a2, a3);
+        vldr(20, b0, 0); b0 += ldb << 2;
+        vldr(21, b1, 0); b1 += ldb << 2;
+        vldr(22, b2, 0); b2 += ldb << 2;
+        vldr(23, b3, 0); b3 += ldb << 2;
+
+        vfmla(0, 20, 16, 0); vfmla(4, 20, 17, 0);
+        vfmla(8, 20, 18, 0); vfmla(12, 20, 19, 0);
+
+        vfmla(1, 21, 16, 1); vfmla(5, 21, 17, 1);
+        vfmla(9, 21, 18, 1); vfmla(13, 21, 19, 1);
+
+        vfmla(2, 22, 16, 2); vfmla(6, 22, 17, 2);
+        vfmla(10, 22, 18, 2); vfmla(14, 22, 19, 2);
+
+        vfmla(3, 23, 16, 3); vfmla(7, 23, 17, 3);
+        vfmla(11, 23, 18, 3); vfmla(15, 23, 19, 3);
+    }
+
+    if (k >= 2) {
+        k -= 2;
+        vldr_f64_post_m4(16, 17, 18, 19, a0, a1, a2, a3);
+        vldr(20, b0, 0); b0 += ldb << 1;
+        vldr(21, b1, 0); b1 += ldb << 1;
+
+        vfmla(0, 20, 16, 0); vfmla(4, 20, 17, 0);
+        vfmla(8, 20, 18, 0); vfmla(12, 20, 19, 0);
+
+        vfmla(1, 21, 16, 1); vfmla(5, 21, 17, 1);
+        vfmla(9, 21, 18, 1); vfmla(13, 21, 19, 1);
+    }
+
+    if (k >= 1) {
+        k -= 1;
+        vldr_f32_post_m4(16, 17, 18, 19, a0, a1, a2, a3);
+        vldr(20, b0, 0);
+
+        vfmla(0, 20, 16, 0); vfmla(4, 20, 17, 0);
+        vfmla(8, 20, 18, 0); vfmla(12, 20, 19, 0);
+    }
+
+    vfadd(0, 0, 1); vfadd(2, 2, 3); vfadd(0, 0, 2);
+    vfadd(4, 4, 5); vfadd(6, 6, 7); vfadd(4, 4, 6);
+    vfadd(8, 8, 9); vfadd(10,10,11); vfadd(8, 8, 10);
+    vfadd(12,12,13); vfadd(14,14,15); vfadd(12,12,14);
+
+    float *c1 = c + ldc, *c2 = c + (ldc << 1), *c3 = c + ldc + (ldc << 1);
+    if (c_state) {
+        vldr(16, c, 0);  vfadd(0, 0, 16); vstr(0, c, 0);
+        vldr(16, c1, 0); vfadd(4, 4, 16); vstr(4, c1, 0);
+        vldr(16, c2, 0); vfadd(8, 8, 16); vstr(8, c2, 0);
+        vldr(16, c3, 0); vfadd(12,12, 16); vstr(12, c3, 0);
+    } else {
+        vstr(0, c, 0); vstr(4, c1, 0); vstr(8, c2, 0); vstr(12, c3, 0);
+    }
+}
+
+#ifndef BLOCK_M
+#define BLOCK_M 256
+#endif
+#ifndef MICRO_M
+#define MICRO_M 4
+#endif
+#ifndef KP_GEM_BLOCK_NC_LG
+#define KP_GEM_BLOCK_NC_LG 256
+#endif
+#define MICRO_N 16
+
+#include <arm_neon.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifndef thread_local
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#define thread_local _Thread_local
+#else
+#define thread_local __thread
+#endif
+#endif
+
+static inline long int align_up(long int n, long int a)
+{
+    return (n + a - 1) & ~(a - 1);
+}
+
+struct kp_gemm_aligned_scratch {
+    float *p;
+    size_t cap;
+};
+
+static inline float *get_scratch(struct kp_gemm_aligned_scratch *s, size_t count)
+{
+    if (s->cap < count) {
+        size_t bytes = count * sizeof(float);
+        bytes = (bytes + 63u) & ~((size_t)63u);
+        float *np = (float *)aligned_alloc(64, bytes);
+        if (np == NULL) {
+            return NULL;
+        }
+        free(s->p);
+        s->p = np;
+        s->cap = bytes / sizeof(float);
+    }
+    return s->p;
+}
+
+static inline float *kgemm_pb_scratch(size_t count)
+{
+    static thread_local struct kp_gemm_aligned_scratch scratch;
+    return get_scratch(&scratch, count);
+}
+
+static inline float *kgemm_pa_scratch(size_t count)
+{
+    static thread_local struct kp_gemm_aligned_scratch scratch;
+    return get_scratch(&scratch, count);
+}
+
+static inline float *kgemm_pa_pad_scratch(size_t count)
+{
+    static thread_local struct kp_gemm_aligned_scratch scratch;
+    return get_scratch(&scratch, count);
+}
+
+#if defined(__GNUC__) && !defined(__clang__)
+#define KP_GEMM_COPY_NO_LIB __attribute__((noinline, optimize("no-tree-loop-distribute-patterns")))
+#else
+#define KP_GEMM_COPY_NO_LIB __attribute__((noinline))
+#endif
+static KP_GEMM_COPY_NO_LIB void kgemm_copy_f32_no_overlap(float *dst, const float *src, long int count)
+{
+    const long int vec_cnt = count & ~3L;
+    const long int tail_cnt = count & 3L;
+    long int i = 0;
+    for (; i < vec_cnt; i += 4) {
+        const float32x4_t v = vld1q_f32(src + i);
+        vst1q_f32(dst + i, v);
+    }
+    if (tail_cnt & 2L) {
+        vst1_f32(dst + vec_cnt, vld1_f32(src + vec_cnt));
+    }
+    if (tail_cnt & 1L) {
+        const long int tail_idx = vec_cnt + (tail_cnt & 2L);
+        dst[tail_idx] = src[tail_idx];
+    }
+}
+#undef KP_GEMM_COPY_NO_LIB
+
+static inline void kgemm_copy_16_f32_no_overlap(float *dst, const float *src)
+{
+    const float32x4_t v0 = vld1q_f32(src + 0);
+    const float32x4_t v1 = vld1q_f32(src + 4);
+    const float32x4_t v2 = vld1q_f32(src + 8);
+    const float32x4_t v3 = vld1q_f32(src + 12);
+    vst1q_f32(dst + 0, v0);
+    vst1q_f32(dst + 4, v1);
+    vst1q_f32(dst + 8, v2);
+    vst1q_f32(dst + 12, v3);
+}
+
+static inline void micro_kernel_8x1_nn_pad(float *a, float *b, float *c,
+    long int lda, long int ldb, long int ldc, long int k, long int c_state, long int valid_m)
+{
+    float *apad = (float *)__builtin_assume_aligned(
+        kgemm_pa_pad_scratch((size_t)8 * 512), 64);
+    float cpad[8] __attribute__((aligned(32)));
+    long int pad_lda = align_up(k, 16);
+
+    for (long int i = 0; i < valid_m; ++i) {
+        kgemm_copy_f32_no_overlap(&apad[i * pad_lda], &a[i * lda], k);
+    }
+    if (c_state) {
+        if (ldc == 1) {
+            kgemm_copy_f32_no_overlap(cpad, c, valid_m);
+        } else {
+            for (long int i = 0; i < valid_m; ++i) {
+                cpad[i] = c[i * ldc];
+            }
+        }
+    }
+
+    micro_kernel_8x1_nn(apad, b, cpad, pad_lda, ldb, 1, k, c_state);
+    if (ldc == 1) {
+        kgemm_copy_f32_no_overlap(c, cpad, valid_m);
+    } else {
+        for (long int i = 0; i < valid_m; ++i) {
+            c[i * ldc] = cpad[i];
+        }
+    }
+}
+
+static inline void micro_kernel_8x1_nn_stride_pad(float *a, float *b, float *c,
+    long int lda, long int ldb, long int ldc, long int k, long int c_state, long int valid_m)
+{
+    float *apad = (float *)__builtin_assume_aligned(
+        kgemm_pa_pad_scratch((size_t)8 * 512), 64);
+    float cpad[8] __attribute__((aligned(32)));
+    long int pad_lda = align_up(k, 16);
+
+    for (long int i = 0; i < valid_m; ++i) {
+        kgemm_copy_f32_no_overlap(&apad[i * pad_lda], &a[i * lda], k);
+    }
+    if (c_state) {
+        if (ldc == 1) {
+            kgemm_copy_f32_no_overlap(cpad, c, valid_m);
+        } else {
+            for (long int i = 0; i < valid_m; ++i) {
+                cpad[i] = c[i * ldc];
+            }
+        }
+    }
+
+    micro_kernel_8x1_nn_stride(apad, b, cpad, pad_lda, ldb, 1, k, c_state);
+    if (ldc == 1) {
+        kgemm_copy_f32_no_overlap(c, cpad, valid_m);
+    } else {
+        for (long int i = 0; i < valid_m; ++i) {
+            c[i * ldc] = cpad[i];
+        }
+    }
+}
+
+static inline void micro_kernel_8x8_nn_pad(float *a, float *b, float *c,
+    long int lda, long int ldb, long int ldc, long int k, long int c_state, long int valid_m)
+{
+    float *apad = (float *)__builtin_assume_aligned(
+        kgemm_pa_pad_scratch((size_t)8 * 512), 64);
+    float cpad[8 * 8] __attribute__((aligned(32)));
+    long int pad_lda = align_up(k, 16);
+
+    for (long int i = 0; i < valid_m; ++i) {
+        kgemm_copy_f32_no_overlap(&apad[i * pad_lda], &a[i * lda], k);
+    }
+    if (c_state) {
+        for (long int i = 0; i < valid_m; ++i) {
+            kgemm_copy_f32_no_overlap(&cpad[i * 8], &c[i * ldc], 8);
+        }
+    }
+
+    micro_kernel_8x8_nn(apad, b, cpad, pad_lda, ldb, 8, k, c_state);
+
+    for (long int i = 0; i < valid_m; ++i) {
+        kgemm_copy_f32_no_overlap(&c[i * ldc], &cpad[i * 8], 8);
+    }
+}
+
+static inline void micro_kernel_4x4_nn_pad(float *a, float *b, float *c,
+    long int lda, long int ldb, long int ldc, long int k, long int c_state, long int valid_m)
+{
+    float *apad = (float *)__builtin_assume_aligned(
+        kgemm_pa_pad_scratch((size_t)8 * 512), 64);
+    float cpad[4 * 4] __attribute__((aligned(32)));
+    long int pad_lda = align_up(k, 16);
+
+    for (long int i = 0; i < valid_m; ++i) {
+        kgemm_copy_f32_no_overlap(&apad[i * pad_lda], &a[i * lda], k);
+    }
+    if (c_state) {
+        for (long int i = 0; i < valid_m; ++i) {
+            kgemm_copy_f32_no_overlap(&cpad[i * 4], &c[i * ldc], 4);
+        }
+    }
+
+    micro_kernel_4x4_nn(apad, b, cpad, pad_lda, ldb, 4, k, c_state);
+
+    for (long int i = 0; i < valid_m; ++i) {
+        kgemm_copy_f32_no_overlap(&c[i * ldc], &cpad[i * 4], 4);
+    }
+}
+
+static inline void micro_kernel_8x2_nn_pad(float *a, float *b, float *c,
+    long int lda, long int ldb, long int ldc, long int k, long int c_state, long int valid_m)
+{
+    float *apad = (float *)__builtin_assume_aligned(
+        kgemm_pa_pad_scratch((size_t)8 * 512), 64);
+    float cpad[8 * 2] __attribute__((aligned(32)));
+    long int pad_lda = align_up(k, 16);
+
+    for (long int i = 0; i < valid_m; ++i) {
+        kgemm_copy_f32_no_overlap(&apad[i * pad_lda], &a[i * lda], k);
+    }
+    if (c_state) {
+        for (long int i = 0; i < valid_m; ++i) {
+            kgemm_copy_f32_no_overlap(&cpad[i * 2], &c[i * ldc], 2);
+        }
+    }
+
+    micro_kernel_8x2_nn(apad, b, cpad, pad_lda, ldb, 2, k, c_state);
+
+    for (long int i = 0; i < valid_m; ++i) {
+        kgemm_copy_f32_no_overlap(&c[i * ldc], &cpad[i * 2], 2);
+    }
+} 
+
+static inline void kgemm_pack_b_16(float *pb, const float *b, long int ldb, long int k)
+{
+    for (long int kk = 0; kk < k; ++kk) {
+        kgemm_copy_16_f32_no_overlap(pb + kk * 16, b + kk * ldb);
+    }
+}
+
+static inline void kgemm_pack_b_kmajor16(float *pb, const float *b,
+    long int ldb, long int n, long int k)
+{
+    for (long int nbase = 0; nbase < n; nbase += 16) {
+        const long int ncur = nbase + 16 <= n ? 16 : n - nbase;
+        float *panel = pb + (nbase / 16) * k * 16;
+        for (long int kk = 0; kk < k; ++kk) {
+            float *dst = panel + kk * 16;
+            const float *src = b + kk * ldb + nbase;
+            if (ncur == 16) {
+                kgemm_copy_16_f32_no_overlap(dst, src);
+            } else {
+                long int lane = 0;
+                for (; lane < ncur; ++lane) dst[lane] = src[lane];
+                for (; lane < 16; ++lane) dst[lane] = 0.0f;
+            }
+        }
+    }
+}
+
+static inline void kgemm_pack_a_kmajor4(float *pa, const float *a, long int lda, long int m, long int k)
+{
+    for (long int mbase = 0; mbase < m; mbase += MICRO_M) {
+        float *panel = pa + (mbase / MICRO_M) * k * MICRO_M;
+        if (mbase + MICRO_M <= m) {
+            const float *a0 = a + mbase * lda;
+            const float *a1 = a0 + lda;
+            const float *a2 = a1 + lda;
+            const float *a3 = a2 + lda;
+            long int kk = 0;
+            const long int peeled_k = k & ~(long)(MICRO_M - 1);
+            for (; kk < peeled_k; kk += MICRO_M) {
+                float32x4_t r0 = vld1q_f32(a0 + kk);
+                float32x4_t r1 = vld1q_f32(a1 + kk);
+                float32x4_t r2 = vld1q_f32(a2 + kk);
+                float32x4_t r3 = vld1q_f32(a3 + kk);
+                float32x4x2_t t01 = vtrnq_f32(r0, r1);
+                float32x4x2_t t23 = vtrnq_f32(r2, r3);
+                float32x4_t c0 = vcombine_f32(vget_low_f32(t01.val[0]), vget_low_f32(t23.val[0]));
+                float32x4_t c1 = vcombine_f32(vget_low_f32(t01.val[1]), vget_low_f32(t23.val[1]));
+                float32x4_t c2 = vcombine_f32(vget_high_f32(t01.val[0]), vget_high_f32(t23.val[0]));
+                float32x4_t c3 = vcombine_f32(vget_high_f32(t01.val[1]), vget_high_f32(t23.val[1]));
+                float *dst = panel + kk * MICRO_M;
+                vst1q_f32(dst + 0, c0);
+                vst1q_f32(dst + 4, c1);
+                vst1q_f32(dst + 8, c2);
+                vst1q_f32(dst + 12, c3);
+            }
+            for (; kk < k; ++kk) {
+                float *dst = panel + kk * MICRO_M;
+                dst[0] = a0[kk];
+                dst[1] = a1[kk];
+                dst[2] = a2[kk];
+                dst[3] = a3[kk];
+            }
+        } else {
+            for (long int kk = 0; kk < k; ++kk) {
+                float *dst = panel + kk * MICRO_M;
+                for (long int lane = 0; lane < MICRO_M; ++lane) {
+                    const long int row = mbase + lane;
+                    dst[lane] = row < m ? a[row * lda + kk] : 0.0f;
+                }
+            }
+        }
+    }
+}
+
+static inline void kgemm_tail_n(float *a, float *b, float *c,
+    long int lda, long int ldb, long int ldc,
+    long int m_blk_idx, long int mcur, long int kidx, long int kcur,
+    long int c_state, long int nn, long int off, long int n)
+{
+    if (nn >= 8) {
+        long int midx = 0;
+        long int msub = 0;
+        for (; msub + 8 <= mcur; msub += 8) {
+            midx = m_blk_idx + msub;
+            micro_kernel_8x8_nn(&a[midx * lda + kidx], &b[kidx * ldb + off], &c[midx * ldc + off],
+                lda, ldb, ldc, kcur, c_state);
+        }
+        if (msub < mcur) {
+            midx = m_blk_idx + msub;
+            micro_kernel_8x8_nn_pad(&a[midx * lda + kidx], &b[kidx * ldb + off], &c[midx * ldc + off],
+                lda, ldb, ldc, kcur, c_state, mcur - msub);
+        }
+        nn -= 8;
+        off += 8;
+    }
+    if (nn >= 4) {
+        long int midx = 0;
+        long int msub = 0;
+        for (; msub + 4 <= mcur; msub += 4) {
+            midx = m_blk_idx + msub;
+            micro_kernel_4x4_nn(&a[midx * lda + kidx], &b[kidx * ldb + off], &c[midx * ldc + off],
+                lda, ldb, ldc, kcur, c_state);
+        }
+        if (msub < mcur) {
+            midx = m_blk_idx + msub;
+            micro_kernel_4x4_nn_pad(&a[midx * lda + kidx], &b[kidx * ldb + off], &c[midx * ldc + off],
+                lda, ldb, ldc, kcur, c_state, mcur - msub);
+        }
+        nn -= 4;
+        off += 4;
+    }
+    if (nn >= 2) {
+        long int midx = 0;
+        long int msub = 0;
+        for (; msub + 8 <= mcur; msub += 8) {
+            midx = m_blk_idx + msub;
+            micro_kernel_8x2_nn(&a[midx * lda + kidx], &b[kidx * ldb + off], &c[midx * ldc + off],
+                lda, ldb, ldc, kcur, c_state);
+        }
+        if (msub < mcur) {
+            midx = m_blk_idx + msub;
+            micro_kernel_8x2_nn_pad(&a[midx * lda + kidx], &b[kidx * ldb + off], &c[midx * ldc + off],
+                lda, ldb, ldc, kcur, c_state, mcur - msub);
+        }
+        nn -= 2;
+        off += 2;
+    }
+    if (nn >= 1) {
+        long int midx = 0;
+        long int msub = 0;
+        if (n == 1 && ldb == 1) {
+            float *pbn1 = &b[kidx * ldb + off];
+            for (; msub + 8 <= mcur; msub += 8) {
+                midx = m_blk_idx + msub;
+                micro_kernel_8x1_nn_stride(&a[midx * lda + kidx], pbn1, &c[midx * ldc + off],
+                    lda, 1, ldc, kcur, c_state);
+            }
+            if (msub < mcur) {
+                midx = m_blk_idx + msub;
+                micro_kernel_8x1_nn_stride_pad(&a[midx * lda + kidx], pbn1, &c[midx * ldc + off],
+                    lda, 1, ldc, kcur, c_state, mcur - msub);
+            }
+        } else {
+            float *pbn1 = &b[kidx * ldb + off];
+            for (; msub + 8 <= mcur; msub += 8) {
+                midx = m_blk_idx + msub;
+                micro_kernel_8x1_nn_stride(&a[midx * lda + kidx], pbn1, &c[midx * ldc + off],
+                    lda, ldb, ldc, kcur, c_state);
+            }
+            if (msub < mcur) {
+                midx = m_blk_idx + msub;
+                micro_kernel_8x1_nn_stride_pad(&a[midx * lda + kidx], pbn1, &c[midx * ldc + off],
+                    lda, ldb, ldc, kcur, c_state, mcur - msub);
+            }
+        }
+    }
+}
+
+static inline void kgemm_neon_fp32_nn_blocked(float *a, float *b, float *c,
+    long int lda, long int ldb, long int ldc,
+    long int m, long int n, long int k, long int addc)
+{
+    if (m == 0 || n == 0 || k == 0) {
+        return;
+    }
+
+    long int nc_lg;
+    if (n > KP_GEM_BLOCK_NC_LG) {
+        nc_lg = align_up(n, 16);
+    } else {
+        nc_lg = KP_GEM_BLOCK_NC_LG;
+    }
+    const long int max_panel = nc_lg / 16;
+
+    float *pb_buf = (float *)__builtin_assume_aligned(
+        kgemm_pb_scratch((size_t)max_panel * 512 * 16), 64);
+    const long int pa_tiles = (m + MICRO_M - 1) / MICRO_M;
+    float *pa_buf = (float *)__builtin_assume_aligned(
+        kgemm_pa_scratch((size_t)pa_tiles * 512 * MICRO_M), 64);
+    
+    for (long int kidx = 0; kidx < k; kidx += 512) {
+        long int kcur = kidx + 512 <= k ? 512 : k - kidx;
+        long int c_state  = kidx | addc;
+        kgemm_pack_a_kmajor4(pa_buf, &a[kidx], lda, m, kcur);
+
+        for (long int n_blk_idx = 0; n_blk_idx < n; n_blk_idx += nc_lg) {
+            long int nc_cur = n_blk_idx + nc_lg <= n ? nc_lg : n - n_blk_idx;
+            long int full_panels = nc_cur / 16;
+            long int tail_n = nc_cur - full_panels * 16;
+
+            for (long int panel = 0; panel < full_panels; ++panel) {
+                float *pb = pb_buf + panel * kcur * 16;
+                kgemm_pack_b_16(pb, &b[kidx * ldb + n_blk_idx + panel * 16], ldb, kcur);
+            }
+
+            for (long int m_blk_idx = 0; m_blk_idx < m; m_blk_idx += BLOCK_M) {
+                long int mcur = m_blk_idx + BLOCK_M <= m ? BLOCK_M : m - m_blk_idx;
+                for (long int panel = 0; panel < full_panels; ++panel) {
+                    long int  nidx = n_blk_idx + panel * 16;
+                    float *pb = pb_buf + panel * kcur * 16;
+                    long int msub = 0;
+                    for (; msub + MICRO_M <= mcur; msub += MICRO_M) {
+                        long int midx = m_blk_idx + msub;
+                        float *pa = pa_buf + (midx / MICRO_M) * kcur * MICRO_M;
+                        micro_kernel_4x16_nn_pa_pb(pa, &c[midx * ldc + nidx], ldc, kcur, c_state, pb);
+                    }
+                    if (msub < mcur) {
+                        long int m_remain = mcur - msub;
+                        long int midx = m_blk_idx + msub;
+                        if (m_remain == 3) {
+                            micro_kernel_3x16_nn(&a[midx * lda + kidx], &b[kidx * ldb + nidx],
+                                &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state);
+                        } else if (m_remain == 2) {
+                            micro_kernel_2x16_nn(&a[midx * lda + kidx], &b[kidx * ldb + nidx],
+                                &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state);
+                        } else {
+                            micro_kernel_1x16_nn(&a[midx * lda + kidx], &b[kidx * ldb + nidx],
+                                &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state);
+                        }
+                    }
+                }
+                if (tail_n > 0) {
+                    long int nidx = n_blk_idx + full_panels * 16;
+                    kgemm_tail_n(a, b, c, lda, ldb, ldc, m_blk_idx, mcur,
+                        kidx, kcur, c_state, tail_n, nidx, n);
+                }
+            }
+        }
+    }
+}
+
+static inline void kgemm_neon_fp32_nn_zereocopy(float *a, float *b, float *c,
+    long int lda, long int ldb, long int ldc,
+    long int m, long int n, long int k, long int addc)
+{
+    float *pb = (float *)__builtin_assume_aligned(
+        kgemm_pb_scratch((size_t)512 * 16), 64);
+    
+    for (long int kidx = 0; kidx < k; kidx += 512) {
+        long int kcur = kidx + 512 <= k ? 512 : k - kidx;
+        for (long int m_blk_idx = 0; m_blk_idx < m; m_blk_idx += BLOCK_M) {
+            long int mcur = m_blk_idx + BLOCK_M <= m ? BLOCK_M : m - m_blk_idx;
+            for (long int nidx = 0; nidx < n; nidx += 16) {
+                long int ncur = nidx + 16 <= n ? 16 : n - nidx;
+                long int c_state = kidx | addc;
+                if (ncur == 16) {
+                    long int midx = m_blk_idx;
+                    long int msub = 0;
+                    if (mcur >= MICRO_M * 2) {
+                        for (; msub + MICRO_M <= mcur; msub += MICRO_M) {
+                            midx = m_blk_idx + msub;
+                            if (msub == 0) {
+                                micro_kernel_4x16_nn_pbg(&a[midx * lda + kidx], &b[kidx * ldb + nidx],
+                                    &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state, pb);
+                            } else {
+                                micro_kernel_4x16_nn_pb(&a[midx * lda + kidx], NULL,
+                                    &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state, pb);
+                            }
+                        }
+                    } else if (mcur >= MICRO_M) {
+                        micro_kernel_4x16_nn(&a[midx * lda + kidx], &b[kidx * ldb + nidx],
+                            &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state);
+                        msub += MICRO_M;
+                    }
+                    if (msub < mcur) {
+                        long int m_remain = mcur - msub;
+                        midx = m_blk_idx + msub;
+                        if (m_remain == 3) {
+                            micro_kernel_3x16_nn(&a[midx * lda + kidx], &b[kidx * ldb + nidx],
+                                &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state);
+                        } else if (m_remain == 2) {
+                            micro_kernel_2x16_nn(&a[midx * lda + kidx], &b[kidx * ldb + nidx],
+                                &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state);
+                        } else {
+                            micro_kernel_1x16_nn(&a[midx * lda + kidx], &b[kidx * ldb + nidx],
+                                &c[midx * ldc + nidx], lda, ldb, ldc, kcur, c_state);
+                        }
+                    }
+                } else {
+                    kgemm_tail_n(a, b, c, lda, ldb, ldc, m_blk_idx, mcur, kidx, kcur, c_state,
+                        ncur, nidx, n);
+                }
+            }
+        }
+    }
+}
+
+// Compute C from A/B blocks packed once by the TensorContraction scheduler.
+// A is packed in 4-row K-major panels and B in 16-column K-major panels.
+static inline void kgemm_neon_fp32_nn_packed(float *pa, float *pb, float *c,
+    long int ldc, long int m, long int n, long int k, long int addc)
+{
+    if (m == 0 || n == 0 || k == 0) {
+        return;
+    }
+
+    for (long int nbase = 0; nbase < n; nbase += 16) {
+        const long int ncur = nbase + 16 <= n ? 16 : n - nbase;
+        float *b_panel = pb + (nbase / 16) * k * 16;
+        for (long int mbase = 0; mbase < m; mbase += 4) {
+            const long int mcur = mbase + 4 <= m ? 4 : m - mbase;
+            float *a_panel = pa + (mbase / 4) * k * 4;
+            float *output = c + mbase * ldc + nbase;
+
+            if (mcur == 4 && ncur == 16) {
+                micro_kernel_4x16_nn_pa_pb(a_panel, output, ldc, k, addc, b_panel);
+            } else {
+                float cpad[4 * 16] __attribute__((aligned(64)));
+                if (addc) {
+                    for (long int i = 0; i < 4 * 16; ++i) cpad[i] = 0.0f;
+                    for (long int i = 0; i < mcur; ++i) {
+                        kgemm_copy_f32_no_overlap(cpad + i * 16, output + i * ldc, ncur);
+                    }
+                }
+                micro_kernel_4x16_nn_pa_pb(a_panel, cpad, 16, k, addc, b_panel);
+                for (long int i = 0; i < mcur; ++i) {
+                    kgemm_copy_f32_no_overlap(output + i * ldc, cpad + i * 16, ncur);
+                }
+            }
+        }
+    }
+}
+
+static inline void kgemm_neon_fp32_nn(float *a, float *b, float *c,
+    long int lda, long int ldb, long int ldc,
+    long int m, long int n, long int k, long int addc)
+{
+    if (n >= 512) {
+        kgemm_neon_fp32_nn_blocked(a, b, c, lda, ldb, ldc, m, n, k, addc);
+    } else {
+        kgemm_neon_fp32_nn_zereocopy(a, b, c, lda, ldb, ldc, m, n, k, addc);
+    }
+}
+
+#endif  // KGEMM_NEON_KERNEL_H
