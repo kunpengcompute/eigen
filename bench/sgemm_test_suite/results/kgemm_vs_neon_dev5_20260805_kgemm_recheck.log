@@ -1,0 +1,51 @@
+# benchmark=comprehensive_tensor_contraction
+# compiler=Clang 17.0.6 ( 17.0.6-57.oe2403sp3)
+# vector_backend=NEON
+# vector_bits=128
+# packet_floats=4
+# gebp_mr=12
+# gebp_nr=8
+# sve2_optimized_gebp=0
+# kgemm_tensor_direct=1
+# kgemm_tensor_direct_policy=canonical_contiguous_fp32_serial
+# kgemm_tensor_direct_expected=1
+# dedicated_small_gemm=0
+# tuple_order=m,k,n
+# max_align_bytes=64
+# tensor_device=DefaultDevice
+# eigen_threads=1
+# tensor_threads=1
+# threads=1
+# layout=row
+# effective_gemm_mapping=external(m,k,n)->internal(n,k,m)
+# gemv_condition=external_m==1
+# mode=C=A*B
+# cpeqab_semantics=tensor_expression_not_fused_beta1_gemm
+# input_pattern=deterministic_normal_v2
+# initial_c=deterministic_nonzero
+# checksum_scope=one_operation_same_inputs
+# cache_state=warm_steady_state
+# warmup_operations_per_sample=1
+# output_reset=before_warmup_outside_timing
+# timed_loop_wrapper=noinline
+# contraction_call=always_inline
+# runtime_mode_branch_in_timed_loop=0
+# tensor_scope=owning_contiguous_alpha1
+# samples=7
+# min_time_ms=250
+# csv=build-kgemm-dev5-validation/recheck_plan.csv
+# group=all
+group,m,k,n,iterations,median_gflops,min_gflops,max_gflops,checksum
+csv,1,1,1,4701259,0.037632,0.037605,0.037649,-0.299996
+csv,1,24,16,5137885,15.762753,15.742006,15.786568,16.421443
+csv,1,16,16,6335786,12.975012,12.966586,12.978838,13.541989
+csv,3,3,3,2972551,0.639632,0.639359,0.644110,-0.982253
+csv,2,2,2,4230654,0.271007,0.270815,0.271150,-1.194234
+csv,4096,4096,4096,1,65.253830,65.215794,65.276571,-88155.142700
+csv,2048,2048,2048,1,66.912718,66.900201,66.932205,-65278.723203
+csv,5,5,5,3046754,3.067806,3.046165,3.071817,1.093691
+csv,7,7,7,1813754,4.982724,4.976389,4.986306,-1.053815
+csv,768,768,768,20,69.959831,69.956641,69.973974,14402.492468
+csv,1024,1024,1024,9,70.051438,70.003418,70.065525,17924.002767
+csv,1536,1536,1536,3,69.732357,69.718112,69.759105,-326.472966
+csv,512,512,512,66,69.910796,69.892370,69.916063,13158.407842
