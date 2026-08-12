@@ -135,6 +135,16 @@ struct TensorContractionBlockMemAllocator {
   }
 };
 
+}  // namespace internal
+}  // namespace Eigen
+
+#if defined(EIGEN_NEON_USE_KGEMM) && EIGEN_NEON_USE_KGEMM
+#include "./TensorContractionKGemm.h"
+#endif
+
+namespace Eigen {
+namespace internal {
+
 // WARNING: In this code we assume that Lhs and Rhs tensor expressions are in
 // ColMajor storage order. This property is guaranteed by the
 // TensorContractionOp evaluator. TensorContractionKernel specifies how we pack
@@ -164,11 +174,11 @@ struct TensorContractionBlockMemAllocator {
 //   type of tensor expression (e.g. TensorImagePatchOp has optimized input
 //   mapper).
 template <typename ResScalar, typename LhsScalar, typename RhsScalar, typename StorageIndex, typename OutputMapper,
-          typename LhsMapper, typename RhsMapper>
+          typename LhsMapper, typename RhsMapper, typename EnableKgemm = void>
 struct TensorContractionKernel {
   // True if `invoke()` supports `beta` in `C <- alpha * A * B + beta * C`
   // (otherwise beta should be always equal to 1).
-  enum { HasBeta = false };
+  enum { HasBeta = false, IsKGemm = false };
 
   EIGEN_DEVICE_FUNC TensorContractionKernel(StorageIndex m_, StorageIndex k_, StorageIndex n_, StorageIndex bm_,
                                             StorageIndex bk_, StorageIndex bn_)
@@ -800,9 +810,9 @@ struct TensorContractionEvaluatorBase {
     // Sizes of the blocks to load in cache. See the Goto paper for details.
     internal::TensorContractionBlocking<Scalar, LhsScalar, RhsScalar, Index, internal::ShardByCol> blocking(
         k_slice, m, n, num_threads);
-    const Index kc = blocking.kc();
-    const Index mc = numext::mini(m, blocking.mc());
-    const Index nc = numext::mini(n, blocking.nc());
+    const Index kc = TensorContractionKernel::IsKGemm ? k_slice : blocking.kc();
+    const Index mc = TensorContractionKernel::IsKGemm ? m : numext::mini(m, blocking.mc());
+    const Index nc = TensorContractionKernel::IsKGemm ? n : numext::mini(n, blocking.nc());
 
     typedef typename TensorContractionKernel::LhsBlock LhsBlock;
     typedef typename TensorContractionKernel::RhsBlock RhsBlock;
@@ -810,7 +820,7 @@ struct TensorContractionEvaluatorBase {
     LhsBlock blockA;
     RhsBlock blockB;
 
-    TensorContractionKernel kernel(m, k_slice, n, mc, kc, nc);
+    TensorContractionKernel kernel(m, this->m_k_size, n, mc, kc, nc);
 
     typedef typename TensorContractionKernel::BlockMemHandle BlockMemHandle;
     const BlockMemHandle packed_mem = kernel.allocate(this->m_device, &blockA, &blockB);

@@ -124,77 +124,164 @@ struct TensorEvaluator<const TensorContractionOp<Indices, LeftArgType, RightArgT
     // different input configurations, thread counts and instruction sets.
     // So feel free to question any of them.
 
-    // Compute whether we want to shard by row or by column.
-    // This is a first approximation, it will be refined later. Since we don't
-    // know number of threads yet we use 2, because what's we are most
-    // interested in at this point is whether it makes sense to use
-    // parallelization at all or not.
-    bool shard_by_col = shardByCol(m, n, 2);
+    // The KGemm contraction specialization accepts only raw, contiguous fp32
+    // matrix contractions. Keep this predicate in sync with
+    // CanUseKgemmContraction in TensorContractionKGemm.h. The contiguity flags
+    // are runtime values here and become template arguments when the execution
+    // context is dispatched below.
+#if EIGEN_ARCH_ARM64 && defined(EIGEN_VECTORIZE_NEON) && defined(EIGEN_NEON_USE_KGEMM) && \
+    EIGEN_NEON_USE_KGEMM
+    const bool may_use_kgemm =
+        std::is_same<Scalar, float>::value && std::is_same<LhsScalar, float>::value &&
+        std::is_same<RhsScalar, float>::value && LeftEvaluator::RawAccess && RightEvaluator::RawAccess && LDims == 2 &&
+        RDims == 2 && ContractDims == 1 && NumDims == 2 && this->m_lhs_inner_dim_contiguous &&
+        this->m_rhs_inner_dim_contiguous && !this->m_rhs_inner_dim_reordered;
+#else
+    const bool may_use_kgemm = false;
+#endif
 
-    // First approximation of kernel blocking sizes.
-    // Again, we don't know number of threads yet, so we use 2.
+    bool shard_by_col;
     Index bm, bn, bk;
-    if (shard_by_col) {
-      internal::TensorContractionBlocking<Scalar, LhsScalar, RhsScalar, Index, internal::ShardByCol> blocking(k, m, n,
-                                                                                                              2);
-      bm = blocking.mc();
-      bn = blocking.nc();
-      bk = blocking.kc();
-    } else {
-      internal::TensorContractionBlocking<Scalar, LhsScalar, RhsScalar, Index, internal::ShardByRow> blocking(k, m, n,
-                                                                                                              2);
-      bm = blocking.mc();
-      bn = blocking.nc();
-      bk = blocking.kc();
-    }
+    int num_threads;
 
-    // Compute optimal number of threads.
-    // Note: we use bk instead of k here because we are interested in amount of
-    // _parallelizable_ computations, and computations are not parallelizable
-    // across k dimension.
-    const TensorOpCost cost = contractionCost(m, n, bm, bn, bk, shard_by_col, false);
-    int num_threads =
-        TensorCostModel<ThreadPoolDevice>::numThreads(static_cast<double>(n) * m, cost, this->m_device.numThreads());
-    int num_threads_by_k = numThreadsInnerDim(m, n, k);
-    if (shardByInnerDim(m, n, k, num_threads, num_threads_by_k)) {
-      // We are in the scenario where it is more effective to shard by the
-      // inner dimension.
-      if (IsEvalInSyncMode) {
-        EvalShardedByInnerDimContext<DoneCallback> ctx(this, num_threads_by_k, buffer, m, n, k, std::move(done));
-        ctx.template run<Alignment>();
-      } else {
-        auto* ctx =
-            new EvalShardedByInnerDimContext<DoneCallback>(this, num_threads_by_k, buffer, m, n, k, std::move(done));
-        ctx->template runAsync<Alignment>();
+    if (may_use_kgemm) {
+      // KGemm already owns the low-level packing and cache blocking. Limit the
+      // number of active workers based on the total input/output working set,
+      // then create coarse 16x4-aligned output blocks for the Eigen scheduler.
+      const int max_threads = this->m_device.numThreads();
+      const double working_set_bytes =
+          (static_cast<double>(m) * n + static_cast<double>(m) * k + static_cast<double>(n) * k) * sizeof(float);
+      const double bytes_per_thread = 64.0 * 1024.0;
+
+      num_threads = max_threads;
+      if (working_set_bytes < bytes_per_thread) {
+        num_threads = 1;
+      } else if (working_set_bytes < bytes_per_thread * max_threads) {
+        num_threads = numext::maxi(1, static_cast<int>(working_set_bytes / bytes_per_thread + 0.999999));
       }
 
-      return;
-    }
+      if (m == 1 || n == 1 || num_threads == 1) {
+        TENSOR_CONTRACTION_DISPATCH(this->template evalProductSequential, Unaligned, (buffer));
+        if (!IsEvalInSyncMode) done();
+        return;
+      }
 
-    // TODO(dvyukov): this is a stop-gap to prevent regressions while the cost
-    // model is not tuned. Remove this when the cost model is tuned.
-    if (n == 1) num_threads = 1;
+      const Index kgemm_mr = 16;
+      const Index kgemm_nr = 4;
+      const Index m_blocks = numext::div_ceil(m, kgemm_mr);
+      Index m_tasks = numext::mini<Index>(m_blocks, static_cast<Index>(num_threads));
 
-    if (num_threads == 1) {
-      TENSOR_CONTRACTION_DISPATCH(this->template evalProductSequential, Unaligned, (buffer));
-      if (!IsEvalInSyncMode) done();
-      return;
-    }
+      // For a short M and a sufficiently wide N, preserve a wider KGemm call
+      // in M and obtain the missing parallelism by splitting N instead.
+      if (m <= 2 * kgemm_mr && n >= static_cast<Index>(num_threads) * 64) m_tasks = 1;
 
-    // Now that we know number of threads, recalculate sharding and blocking.
-    shard_by_col = shardByCol(m, n, num_threads);
-    if (shard_by_col) {
-      internal::TensorContractionBlocking<Scalar, LhsScalar, RhsScalar, Index, internal::ShardByCol> blocking(
-          k, m, n, num_threads);
-      bm = blocking.mc();
-      bn = blocking.nc();
-      bk = blocking.kc();
+      Index n_tasks = 1;
+      if (m_tasks < num_threads) {
+        const Index max_n_tasks = numext::div_ceil(n, kgemm_nr);
+        n_tasks = numext::mini<Index>(max_n_tasks, numext::div_ceil<Index>(num_threads, m_tasks));
+      }
+
+      // Round the nominal block sizes up to complete KGemm micro-kernel
+      // blocks. EvalParallelContext accounts for the incomplete final blocks.
+      bm = numext::div_ceil<Index>(m_blocks, m_tasks) * kgemm_mr;
+      const Index n_blocks = numext::div_ceil(n, kgemm_nr);
+      bn = numext::div_ceil<Index>(n_blocks, n_tasks) * kgemm_nr;
+      bk = k;
+
+#if defined(EIGEN_NEON_KGEMM_REUSE_PACKING) && EIGEN_NEON_KGEMM_REUSE_PACKING
+      // By default pack the full K dimension once.  A positive tuning value
+      // enables bounded, double-buffered K slices for experiments on systems
+      // where the packed working set would otherwise be too large.
+#if defined(EIGEN_NEON_KGEMM_PACK_KC) && EIGEN_NEON_KGEMM_PACK_KC > 0
+      bk = numext::mini(k, static_cast<Index>(EIGEN_NEON_KGEMM_PACK_KC));
+#endif
+#elif defined(EIGEN_KUNPENG_KSPLIT) && defined(EIGEN_KUNPENG_KSPLIT_THRESHOLD) && \
+    defined(EIGEN_KUNPENG_KSPLIT_CHUNK_SIZE)
+      if (k > static_cast<Index>(EIGEN_KUNPENG_KSPLIT_THRESHOLD)) {
+        bk = numext::mini(k, static_cast<Index>(EIGEN_KUNPENG_KSPLIT_CHUNK_SIZE));
+      }
+#endif
+
+      shard_by_col = false;
+      const Index output_tasks = numext::div_ceil(m, bm) * numext::div_ceil(n, bn);
+      num_threads = numext::mini<int>(num_threads, static_cast<int>(output_tasks));
+      if (num_threads == 1) {
+        TENSOR_CONTRACTION_DISPATCH(this->template evalProductSequential, Unaligned, (buffer));
+        if (!IsEvalInSyncMode) done();
+        return;
+      }
     } else {
-      internal::TensorContractionBlocking<Scalar, LhsScalar, RhsScalar, Index, internal::ShardByRow> blocking(
-          k, m, n, num_threads);
-      bm = blocking.mc();
-      bn = blocking.nc();
-      bk = blocking.kc();
+      // Compute whether we want to shard by row or by column.
+      // This is a first approximation, it will be refined later. Since we don't
+      // know number of threads yet we use 2, because what's we are most
+      // interested in at this point is whether it makes sense to use
+      // parallelization at all or not.
+      shard_by_col = shardByCol(m, n, 2);
+
+      // First approximation of kernel blocking sizes.
+      // Again, we don't know number of threads yet, so we use 2.
+      if (shard_by_col) {
+        internal::TensorContractionBlocking<Scalar, LhsScalar, RhsScalar, Index, internal::ShardByCol> blocking(
+            k, m, n, 2);
+        bm = blocking.mc();
+        bn = blocking.nc();
+        bk = blocking.kc();
+      } else {
+        internal::TensorContractionBlocking<Scalar, LhsScalar, RhsScalar, Index, internal::ShardByRow> blocking(
+            k, m, n, 2);
+        bm = blocking.mc();
+        bn = blocking.nc();
+        bk = blocking.kc();
+      }
+
+      // Compute optimal number of threads.
+      // Note: we use bk instead of k here because we are interested in amount
+      // of _parallelizable_ computations, and computations are not
+      // parallelizable across k dimension.
+      const TensorOpCost cost = contractionCost(m, n, bm, bn, bk, shard_by_col, false);
+      num_threads = TensorCostModel<ThreadPoolDevice>::numThreads(static_cast<double>(n) * m, cost,
+                                                                  this->m_device.numThreads());
+      int num_threads_by_k = numThreadsInnerDim(m, n, k);
+      if (shardByInnerDim(m, n, k, num_threads, num_threads_by_k)) {
+        // We are in the scenario where it is more effective to shard by the
+        // inner dimension.
+        if (IsEvalInSyncMode) {
+          EvalShardedByInnerDimContext<DoneCallback> ctx(this, num_threads_by_k, buffer, m, n, k, std::move(done));
+          ctx.template run<Alignment>();
+        } else {
+          auto* ctx =
+              new EvalShardedByInnerDimContext<DoneCallback>(this, num_threads_by_k, buffer, m, n, k, std::move(done));
+          ctx->template runAsync<Alignment>();
+        }
+
+        return;
+      }
+
+      // TODO(dvyukov): this is a stop-gap to prevent regressions while the cost
+      // model is not tuned. Remove this when the cost model is tuned.
+      if (n == 1) num_threads = 1;
+
+      if (num_threads == 1) {
+        TENSOR_CONTRACTION_DISPATCH(this->template evalProductSequential, Unaligned, (buffer));
+        if (!IsEvalInSyncMode) done();
+        return;
+      }
+
+      // Now that we know number of threads, recalculate sharding and blocking.
+      shard_by_col = shardByCol(m, n, num_threads);
+      if (shard_by_col) {
+        internal::TensorContractionBlocking<Scalar, LhsScalar, RhsScalar, Index, internal::ShardByCol> blocking(
+            k, m, n, num_threads);
+        bm = blocking.mc();
+        bn = blocking.nc();
+        bk = blocking.kc();
+      } else {
+        internal::TensorContractionBlocking<Scalar, LhsScalar, RhsScalar, Index, internal::ShardByRow> blocking(
+            k, m, n, num_threads);
+        bm = blocking.mc();
+        bn = blocking.nc();
+        bk = blocking.kc();
+      }
     }
 
     // Number of kernels for each dimension.
@@ -209,13 +296,17 @@ struct TensorEvaluator<const TensorContractionOp<Indices, LeftArgType, RightArgT
     // consecutive kernels).
     Index gm = 1;
     Index gn = 1;
-    // If we are sharding by column, then we prefer to reduce rows first.
-    if (shard_by_col) {
-      gm = coarsenM(m, n, bm, bn, bk, gn, num_threads, shard_by_col);
-      gn = coarsenN(m, n, bm, bn, bk, gm, num_threads, shard_by_col);
-    } else {
-      gn = coarsenN(m, n, bm, bn, bk, gm, num_threads, shard_by_col);
-      gm = coarsenM(m, n, bm, bn, bk, gn, num_threads, shard_by_col);
+    // KGemm blocks are already sized as complete scheduler tasks. Generic
+    // contractions still use Eigen's task coarsening heuristics.
+    if (!may_use_kgemm) {
+      // If we are sharding by column, then we prefer to reduce rows first.
+      if (shard_by_col) {
+        gm = coarsenM(m, n, bm, bn, bk, gn, num_threads, shard_by_col);
+        gn = coarsenN(m, n, bm, bn, bk, gm, num_threads, shard_by_col);
+      } else {
+        gn = coarsenN(m, n, bm, bn, bk, gm, num_threads, shard_by_col);
+        gm = coarsenM(m, n, bm, bn, bk, gn, num_threads, shard_by_col);
+      }
     }
     // Number of tasks in each dimension.
     Index nm = numext::div_ceil(nm0, gm);
@@ -238,7 +329,8 @@ struct TensorEvaluator<const TensorContractionOp<Indices, LeftArgType, RightArgT
                                       : num_worker_threads <= 64 ? 0.8
                                                                  : /* num_worker_threads > 64 */ 0.6;
 
-    const bool parallelize_by_sharding_dim_only = sharding_dim_tasks >= oversharding_factor * num_worker_threads;
+    const bool parallelize_by_sharding_dim_only =
+        !may_use_kgemm && sharding_dim_tasks >= oversharding_factor * num_worker_threads;
 
     // Last by not least, decide whether we want to issue both lhs and rhs
     // packing in parallel; or issue lhs packing first, and then issue rhs
@@ -247,16 +339,19 @@ struct TensorEvaluator<const TensorContractionOp<Indices, LeftArgType, RightArgT
     // kernels), while sequential packing provides better locality (once
     // a thread finishes rhs packing it proceed to kernels with that rhs).
     // First, we are interested in parallel packing if there are few tasks.
-    bool parallel_pack = num_threads >= nm * nn;
-    // Also do parallel packing if all data fits into L2$.
-    if (m * bk * Index(sizeof(LhsScalar)) + n * bk * Index(sizeof(RhsScalar)) <= l2CacheSize() * num_threads)
-      parallel_pack = true;
-    // But don't do it if we will use each rhs only once. Locality seems to be
-    // more important in this case.
-    if ((shard_by_col ? nm : nn) == 1) parallel_pack = false;
-    // Also don't get in the way of parallelize_by_sharding_dim_only
-    // optimization.
-    if (parallelize_by_sharding_dim_only) parallel_pack = false;
+    bool parallel_pack = false;
+    if (!may_use_kgemm) {
+      parallel_pack = num_threads >= nm * nn;
+      // Also do parallel packing if all data fits into L2$.
+      if (m * bk * Index(sizeof(LhsScalar)) + n * bk * Index(sizeof(RhsScalar)) <= l2CacheSize() * num_threads)
+        parallel_pack = true;
+      // But don't do it if we will use each rhs only once. Locality seems to be
+      // more important in this case.
+      if ((shard_by_col ? nm : nn) == 1) parallel_pack = false;
+      // Also don't get in the way of parallelize_by_sharding_dim_only
+      // optimization.
+      if (parallelize_by_sharding_dim_only) parallel_pack = false;
+    }
 
     // TODO(ezhulnev): With if contexpr we don't need SyncEvalParallelContext.
     if (IsEvalInSyncMode) {
