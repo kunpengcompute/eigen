@@ -1115,3 +1115,286 @@ bool verifyContraction(int m, int k, int n, bool accumulate, const Device& devic
 // Benchmark runner (layout dispatch)
 // =========================================================================
 
+template <typename Device>
+bool runBenchmarkProblem(const ProblemSize& sz, const BenchConfig& cfg, const Device& device) {
+  double gflops = 0.0, gflops_min = 0.0, gflops_max = 0.0;
+  double spread_pct = 0.0;
+  std::int64_t iters = 0;
+  double checksum = 0.0;
+  const char* kernel_path = "unknown";
+
+  auto do_run = [&](auto layout_tag, auto accumulate_tag) -> bool {
+    constexpr int Layout = decltype(layout_tag)::value;
+    constexpr bool Accumulate = decltype(accumulate_tag)::value;
+    ContractionBenchmark<Layout, Device, Accumulate> runner(sz.m, sz.k, sz.n, device);
+    kernel_path = expectedKernelPath(sz.m, sz.k, sz.n, Layout);
+    checksum = runner.oneOperationChecksum();
+    iters = calibrateIters(runner, cfg.min_time_seconds);
+
+    std::vector<double> gflops_samples;
+    gflops_samples.reserve(cfg.samples);
+    const double flops = 2.0 * static_cast<double>(sz.m) * static_cast<double>(sz.n) * static_cast<double>(sz.k);
+
+    for (int s = 0; s < cfg.samples; ++s) {
+      const double elapsed = runner.run(iters);
+      if (!std::isfinite(elapsed) || elapsed <= 0.0) {
+        std::cerr << "Invalid elapsed time for " << sz.m << ',' << sz.k << ',' << sz.n << "\n";
+        return false;
+      }
+      gflops_samples.push_back(1e-9 * flops * iters / elapsed);
+    }
+    std::sort(gflops_samples.begin(), gflops_samples.end());
+
+    const std::size_t middle = gflops_samples.size() / 2;
+    gflops = gflops_samples.size() % 2 == 0 ? 0.5 * (gflops_samples[middle - 1] + gflops_samples[middle])
+                                            : gflops_samples[middle];
+    gflops_min = gflops_samples.front();
+    gflops_max = gflops_samples.back();
+    spread_pct = 100.0 * (gflops_max - gflops_min) / gflops;
+    if (cfg.max_spread_pct > 0.0 && spread_pct > cfg.max_spread_pct) {
+      std::cerr << "Sample spread " << spread_pct << "% exceeds --max-spread-pct "
+                << cfg.max_spread_pct << "% for " << sz.m << ',' << sz.k << ',' << sz.n << "\n";
+      return false;
+    }
+    return true;
+  };
+
+  // Select the runtime mode once per problem. The timed loop then enters a
+  // compile-time-specialized execute path with no accumulate/overwrite branch.
+  auto dispatch_mode = [&](auto layout_tag) -> bool {
+    if (cfg.accumulate) {
+      return do_run(layout_tag, std::true_type{});
+    }
+    return do_run(layout_tag, std::false_type{});
+  };
+
+  bool ok = false;
+  if (cfg.layout_str == "row") {
+    ok = dispatch_mode(std::integral_constant<int, Eigen::RowMajor>{});
+  } else {
+    ok = dispatch_mode(std::integral_constant<int, Eigen::ColMajor>{});
+  }
+  if (!ok) return false;
+
+  std::cout << sz.group << ',' << sz.m << ',' << sz.k << ',' << sz.n << ',' << iters << ',' << gflops << ','
+            << gflops_min << ',' << gflops_max << ',' << checksum << ',' << spread_pct << ',' << kernel_path << '\n';
+  return true;
+}
+
+// =========================================================================
+// Metadata output
+// =========================================================================
+
+void printMetadata(const BenchConfig& cfg, const char* tensor_device) {
+  using Traits = Eigen::internal::gebp_traits<float, float>;
+
+  std::cout << "# benchmark=comprehensive_tensor_contraction\n";
+  std::cout << "# compiler=" << __VERSION__ << "\n";
+  std::cout << "# vector_backend=" << vectorBackend() << "\n";
+  std::cout << "# vector_bits=" << vectorBits() << "\n";
+  std::cout << "# packet_floats=" << Eigen::internal::packet_traits<float>::size << "\n";
+  std::cout << "# gebp_mr=" << Traits::mr << "\n";
+  std::cout << "# gebp_nr=" << Traits::nr << "\n";
+  std::cout << "# sve2_optimized_gebp=" << (optimizedSve2GebpEnabled() ? 1 : 0) << "\n";
+  std::cout << "# kgemm_tensor_kernel=" << (kgemmTensorKernelEnabled() ? 1 : 0) << "\n";
+  std::cout << "# kgemm_tensor_kernel_policy=canonical_contiguous_fp32_default_or_threadpool\n";
+  std::cout << "# kgemm_tensor_kernel_expected="
+            << (kgemmTensorKernelEnabled() ? 1 : 0) << "\n";
+  std::cout << "# kgemm_pack_reuse=" << (kgemmPackingReuseEnabled() ? 1 : 0) << "\n";
+  std::cout << "# kgemm_test_instrumentation=" << (kgemmInstrumentationEnabled() ? 1 : 0) << "\n";
+#if defined(EIGEN_NEON_KGEMM_PACK_REUSE_MIN_MN)
+  std::cout << "# kgemm_pack_reuse_min_mn=" << EIGEN_NEON_KGEMM_PACK_REUSE_MIN_MN << "\n";
+  std::cout << "# kgemm_pack_reuse_min_k=" << EIGEN_NEON_KGEMM_PACK_REUSE_MIN_K << "\n";
+#endif
+  std::cout << "# dedicated_small_gemm=" << (tensorNoPackSmallGemmEnabled() ? 1 : 0) << "\n";
+#if defined(EIGEN_SVE_TENSOR_CONTRACTION_SMALL_GEMM_MAX_ROWS)
+  std::cout << "# tensor_small_gemm_max_rows=" << EIGEN_SVE_TENSOR_CONTRACTION_SMALL_GEMM_MAX_ROWS << "\n";
+  std::cout << "# tensor_small_gemm_policy=m1_3_kvec_kge2,m4_7_nvec,m8_shallow_or_narrow,m10_deep,m11_deep,m12_15\n";
+  std::cout << "# sve_small_gemm_k_vector_max_rows=" << EIGEN_SVE_SMALL_GEMM_K_VECTOR_MAX_ROWS << "\n";
+  std::cout << "# sve_small_gemm_k_vector_min_depth=" << EIGEN_SVE_SMALL_GEMM_K_VECTOR_MIN_DEPTH << "\n";
+  std::cout << "# sve_small_gemm_n_vector_max_rows=" << EIGEN_SVE_SMALL_GEMM_N_VECTOR_MAX_ROWS << "\n";
+  std::cout << "# sve_small_gemm_m8_dual_accumulators=" << EIGEN_SVE_SMALL_GEMM_M8_DUAL_ACCUMULATORS << "\n";
+  std::cout << "# tensor_m8_deep_max_cols=" << EIGEN_SVE_TENSOR_CONTRACTION_M8_DEEP_MAX_COLS << "\n";
+  std::cout << "# tensor_m8_deep_max_depth=" << EIGEN_SVE_TENSOR_CONTRACTION_M8_DEEP_MAX_DEPTH << "\n";
+  std::cout << "# tensor_m10_min_depth=" << EIGEN_SVE_TENSOR_CONTRACTION_M10_MIN_DEPTH << "\n";
+  std::cout << "# tensor_m11_min_depth=" << EIGEN_SVE_TENSOR_CONTRACTION_M11_MIN_DEPTH << "\n";
+#endif
+#if defined(EIGEN_SVE_GEBP_REMAINDER_NR8)
+  std::cout << "# sve_gebp_remainder_nr8=" << EIGEN_SVE_GEBP_REMAINDER_NR8 << "\n";
+#endif
+#if defined(EIGEN_SVE_GEBP_INTERLEAVED_REMAINDER)
+  std::cout << "# sve_gebp_interleaved_remainder=" << EIGEN_SVE_GEBP_INTERLEAVED_REMAINDER << "\n";
+#endif
+  std::cout << "# tuple_order=m,k,n\n";
+  std::cout << "# max_align_bytes=" << EIGEN_MAX_ALIGN_BYTES << "\n";
+  std::cout << "# tensor_device=" << tensor_device << "\n";
+  std::cout << "# eigen_threads=1\n";
+  std::cout << "# tensor_threads=" << cfg.threads << "\n";
+  std::cout << "# threads=" << cfg.threads << "\n";
+  std::cout << "# layout=" << cfg.layout_str << "\n";
+  if (cfg.layout_str == "row") {
+    std::cout << "# effective_gemm_mapping=external(m,k,n)->internal(n,k,m)\n";
+    std::cout << "# gemv_condition=external_m==1\n";
+  } else {
+    std::cout << "# effective_gemm_mapping=external(m,k,n)->internal(m,k,n)\n";
+    std::cout << "# gemv_condition=external_n==1\n";
+  }
+  std::cout << "# mode=" << (cfg.accumulate ? "C+=A*B" : "C=A*B") << "\n";
+  std::cout << "# cpeqab_semantics=tensor_expression_not_fused_beta1_gemm\n";
+  std::cout << "# input_pattern=deterministic_normal_v2\n";
+  std::cout << "# initial_c=deterministic_nonzero\n";
+  std::cout << "# checksum_scope=one_operation_same_inputs\n";
+  std::cout << "# cache_state=warm_steady_state\n";
+  std::cout << "# warmup_operations_per_sample=1\n";
+  std::cout << "# output_reset=before_warmup_outside_timing\n";
+  std::cout << "# timed_loop_wrapper=noinline\n";
+  std::cout << "# contraction_call=always_inline\n";
+  std::cout << "# runtime_mode_branch_in_timed_loop=0\n";
+  std::cout << "# tensor_scope=owning_contiguous_alpha1\n";
+  std::cout << "# samples=" << cfg.samples << "\n";
+  std::cout << "# min_time_ms=" << cfg.min_time_seconds * 1000.0 << "\n";
+  std::cout << "# max_spread_pct=" << cfg.max_spread_pct << "\n";
+  if (!cfg.csv_file.empty()) std::cout << "# csv=" << cfg.csv_file << "\n";
+  std::cout << "# group=" << cfg.group << "\n";
+}
+
+// =========================================================================
+// Main (outside anonymous namespace — must have external linkage)
+// =========================================================================
+
+template <typename Device>
+int runSuite(const BenchConfig& cfg, const Device& device, const char* tensor_device) {
+  if (cfg.verify) {
+    std::vector<ProblemSize> verify_sizes;
+    if (cfg.has_custom_size) {
+      verify_sizes.push_back({"custom", cfg.custom_m, cfg.custom_k, cfg.custom_n});
+    } else if (!cfg.csv_file.empty()) {
+      if (!readCsv(cfg.csv_file, verify_sizes)) return 2;
+    } else {
+      for (int i = 0; i < numVerificationSizes(); ++i) {
+        if (cfg.group == "all" || cfg.group == kVerificationSizes[i].group) {
+          verify_sizes.push_back(kVerificationSizes[i]);
+        }
+      }
+    }
+    if (verify_sizes.empty()) {
+      std::cerr << "No verification cases matched --group " << cfg.group << "\n";
+      return 2;
+    }
+
+    std::cout << "# Verification mode: comparing Eigen contraction against double-precision GEMM\n";
+    std::cout << "# compiler=" << __VERSION__ << "\n";
+    std::cout << "# vector_backend=" << vectorBackend() << "\n";
+    std::cout << "# vector_bits=" << vectorBits() << "\n";
+    std::cout << "# kgemm_tensor_kernel=" << (kgemmTensorKernelEnabled() ? 1 : 0) << "\n";
+    std::cout << "# kgemm_pack_reuse=" << (kgemmPackingReuseEnabled() ? 1 : 0) << "\n";
+    std::cout << "# kgemm_test_instrumentation=" << (kgemmInstrumentationEnabled() ? 1 : 0) << "\n";
+#if defined(EIGEN_NEON_KGEMM_PACK_REUSE_MIN_MN)
+    std::cout << "# kgemm_pack_reuse_min_mn=" << EIGEN_NEON_KGEMM_PACK_REUSE_MIN_MN << "\n";
+    std::cout << "# kgemm_pack_reuse_min_k=" << EIGEN_NEON_KGEMM_PACK_REUSE_MIN_K << "\n";
+#endif
+    std::cout << "# tensor_device=" << tensor_device << "\n";
+    std::cout << "# threads=" << cfg.threads << "\n";
+    std::cout << "# layout=" << cfg.layout_str << "\n";
+    std::cout << "# mode=" << (cfg.verify_both_modes ? "both" : (cfg.accumulate ? "cpeqab" : "ceqab")) << "\n";
+    std::cout << "# tolerance=8*(gamma_(2K+1)*sum_abs+u*max(1,abs(reference)))\n";
+    std::cout << "# input_pattern=deterministic_normal_v2\n";
+    std::cout << "# exact_input_pattern=one_hot_a_integral_b_c\n";
+    std::cout << "# initial_c=deterministic_nonzero\n";
+    std::cout << "# tensor_scope=owning_contiguous_alpha1\n\n";
+
+    int passed = 0;
+    int failed = 0;
+    for (const auto& sz : verify_sizes) {
+      const int mode_count = cfg.verify_both_modes ? 2 : 1;
+      for (int mode_index = 0; mode_index < mode_count; ++mode_index) {
+        const bool accumulate = cfg.verify_both_modes ? mode_index == 1 : cfg.accumulate;
+        if (cfg.layout_str == "row" || cfg.layout_str == "both") {
+          const bool ok = verifyContraction<Eigen::RowMajor>(sz.m, sz.k, sz.n, accumulate, device);
+          ok ? ++passed : ++failed;
+        }
+        if (cfg.layout_str == "col" || cfg.layout_str == "both") {
+          const bool ok = verifyContraction<Eigen::ColMajor>(sz.m, sz.k, sz.n, accumulate, device);
+          ok ? ++passed : ++failed;
+        }
+      }
+    }
+    std::cout << "\n# Result: " << passed << " passed, " << failed << " failed"
+              << (failed == 0 ? "  ALL GOOD\n" : "  ERRORS DETECTED\n");
+    return failed > 0 ? 1 : 0;
+  }
+
+  printMetadata(cfg, tensor_device);
+  std::cout << "group,m,k,n,iterations,median_gflops,min_gflops,max_gflops,checksum,spread_pct,kernel_path\n";
+  std::cout << std::fixed << std::setprecision(6);
+
+  std::vector<ProblemSize> problems;
+  if (cfg.has_custom_size) {
+    problems.push_back({"custom", cfg.custom_m, cfg.custom_k, cfg.custom_n});
+  } else if (!cfg.csv_file.empty()) {
+    if (!readCsv(cfg.csv_file, problems)) return 2;
+  } else {
+    for (int i = 0; i < numBuiltinSizes(); ++i) problems.push_back(kBuiltinSizes[i]);
+  }
+
+  int problems_run = 0;
+  for (const auto& sz : problems) {
+    if (cfg.group == "all" || cfg.group == sz.group) {
+      if (!runBenchmarkProblem(sz, cfg, device)) return 1;
+      ++problems_run;
+    }
+  }
+  if (problems_run == 0) {
+    std::cerr << "No benchmark cases matched --group " << cfg.group << "\n";
+    return 2;
+  }
+  return 0;
+}
+
+}  // namespace
+
+int main(int argc, char** argv) {
+  BenchConfig cfg;
+  if (!parseOptions(argc, argv, cfg)) {
+    std::cerr << "Invalid arguments. Use --help for usage.\n";
+    return 2;
+  }
+
+  // Validate kernel selection
+  const char* backend = vectorBackend();
+  if (!cfg.kernel_str.empty()) {
+    bool ok = false;
+    if (cfg.kernel_str == "neon") {
+      ok = (std::strcmp(backend, "NEON") == 0) && !kgemmTensorKernelEnabled();
+    } else if (cfg.kernel_str == "kgemm") {
+      ok = kgemmTensorKernelEnabled();
+    } else if (cfg.kernel_str == "sve") {
+      ok = optimizedSve2GebpEnabled();
+    }
+    if (!ok) {
+      std::cerr << "Error: --kernel " << cfg.kernel_str << " requested but binary compiled with " << backend
+                << " backend.\n";
+      std::cerr << "Recompile with appropriate flags:\n";
+      std::cerr << "  NEON: -pthread -DEIGEN_USE_THREADS=1 -DEIGEN_MAX_ALIGN_BYTES=64 -march=armv9-a+nosve\n";
+      std::cerr << "  KGemm: -pthread -DEIGEN_USE_THREADS=1 -DEIGEN_MAX_ALIGN_BYTES=64"
+                   " -DEIGEN_NEON_USE_KGEMM=1 -march=armv9-a+nosve\n";
+      std::cerr << "  SVE2: -pthread -DEIGEN_USE_THREADS=1 -DEIGEN_MAX_ALIGN_BYTES=64"
+                   " -DEIGEN_ARM64_USE_SVE=1 -DEIGEN_BENCHMARK_REQUIRE_SVE2=1"
+                   " -march=armv9-a+sve2 -msve-vector-bits=256\n";
+      return 1;
+    }
+  }
+
+  // Keep Eigen Core products serial inside TensorContraction worker tasks.
+  // ThreadPoolDevice owns the only parallel scheduling layer when threads > 1.
+  Eigen::setNbThreads(1);
+
+  if (cfg.threads == 1) {
+    Eigen::DefaultDevice device;
+    return runSuite(cfg, device, "DefaultDevice");
+  }
+
+  Eigen::ThreadPool pool(cfg.threads);
+  Eigen::ThreadPoolDevice device(&pool, cfg.threads);
+  return runSuite(cfg, device, "ThreadPoolDevice");
+}
