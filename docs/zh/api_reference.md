@@ -6,7 +6,7 @@ KGemm优化通过编译宏接入Eigen公开的TensorContraction表达式，不�
 
 **表 1** KGemm接口列表<a id="KGemm接口列表"></a>
 
-|名称|说明|
+|接口名称|接口说明|
 |--|--|
 |`EIGEN_NEON_USE_KGEMM`|启用ARM64 NEON KGemm TensorContraction特化。|
 |`EIGEN_NEON_KGEMM_REUSE_PACKING`|控制大尺寸TensorContraction是否复用调度器packing，默认值为1。|
@@ -120,3 +120,9 @@ static inline void kgemm_neon_fp32_nn_packed(
 ```
 
 `pa`使用4行K-major panel布局，`pb`使用16列K-major panel布局。该接口由TensorContraction调度器调用，不建议业务代码直接调用。
+
+## 修订记录
+
+| 发布日期 | 修订记录 |
+| --- | --- |
+| 2026-09-30 | 第一次正式发布。新增基于Eigen 3.4.0和5.0.0的ARM64 KGemm TensorContraction优化补丁。 |

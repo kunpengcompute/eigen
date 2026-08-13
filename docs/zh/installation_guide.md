@@ -29,7 +29,7 @@ Eigen 3.4.0 请将上述路径替换为 `3.4.0/eigen-3.4.0-kgemm.patch`。
 
 ### 安装步骤
 
-Eigen 是头文件库。可以直接把源码根目录加入 include 路径，也可以使用 CMake 安装：
+Eigen 是头文件库。可以直接把源码根目录加入 include 路径，也可以使用 CMake 安装。
 
 ```bash
 cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/opt/eigen-kgemm
@@ -47,7 +47,7 @@ cmake --install build
 | `EIGEN_NEON_KGEMM_PACK_REUSE_MIN_MN` | packing 复用的 M/N 最小值 | `768` |
 | `EIGEN_NEON_KGEMM_PACK_REUSE_MIN_K` | packing 复用的 K 最小值 | `512` |
 
-推荐编译参数：
+推荐编译参数。
 
 ```bash
 -O3 -DNDEBUG -march=armv8-a -DEIGEN_NEON_USE_KGEMM
@@ -58,7 +58,7 @@ cmake --install build
 ## 运行测试
 
 发布补丁不附带测试程序。可使用业务侧 TensorContraction 用例或 Eigen 上游测试，
-分别构建原生 NEON 与 KGemm 配置，比较正确性和性能。KGemm 构建参数示例：
+分别构建原生 NEON 与 KGemm 配置，比较正确性和性能。KGemm 构建参数示例。
 
 ```bash
 g++ -O3 -DNDEBUG -march=armv8-a -DEIGEN_USE_THREADS \
@@ -80,3 +80,9 @@ KGemm 仅适用于 AArch64 NEON、FP32、非转置布局对应的 TensorContract
 ### 如何启用多线程？
 
 同时定义 `EIGEN_USE_THREADS`，使用 `Eigen::ThreadPoolDevice` 执行 contraction，并在链接时加入 `-pthread`。
+
+## 修订记录
+
+| 发布日期 | 修订记录 |
+| --- | --- |
+| 2026-09-30 | 第一次正式发布。新增基于Eigen 3.4.0和5.0.0的ARM64 KGemm TensorContraction优化补丁。 |

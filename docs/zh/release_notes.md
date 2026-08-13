@@ -51,6 +51,6 @@
 | [快速入门](quick_start.md) | 最短启用流程和使用示例 |
 | [接口参考](api_reference.md) | 宏、接口和调度约束 |
 
-### 获取文档的方法
+## 获取文档的方法
 
-中文文档位于 `docs/zh`，英文文档位于 `docs/en`。文档入口见仓库根目录的 `README.md` 和 `README_EN.md`。
+您可以通过访问开源仓（https://gitcode.com/boostkit/eigen）浏览和获取相关文档。

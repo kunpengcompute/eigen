@@ -6,7 +6,7 @@ The optimization integrates with Eigen's public TensorContraction expression thr
 
 **Table 1** KGemm Interfaces<a id="KGemmInterfaces"></a>
 
-|Name|Description|
+|Interface Name|Interface Description|
 |--|--|
 |`EIGEN_NEON_USE_KGEMM`|Enables the AArch64 NEON KGemm TensorContraction specialization.|
 |`EIGEN_NEON_KGEMM_REUSE_PACKING`|Controls scheduler packing reuse for large contractions. The default is 1.|
@@ -120,3 +120,9 @@ static inline void kgemm_neon_fp32_nn_packed(
 ```
 
 `pa` uses four-row K-major panels and `pb` uses 16-column K-major panels. The TensorContraction scheduler invokes this interface; application code should not call it directly.
+
+## Revision History
+
+| Release Date | Revision Record |
+| --- | --- |
+| 2026-09-30 | First official release. Adds the AArch64 KGemm TensorContraction optimization patches for Eigen 3.4.0 and 5.0.0. |

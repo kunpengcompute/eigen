@@ -2,7 +2,7 @@
 
 ## 最新消息
 
-- [2026.08.12]：发布基于Eigen 3.4.0和5.0.0的ARM64 KGemm优化补丁，支持TensorContraction单线程、线程池和packing复用。
+- [2026.09.30]：第一次正式发布，新增基于Eigen 3.4.0和5.0.0的ARM64 KGemm TensorContraction优化补丁。
 
 ## 项目介绍
 
@@ -12,7 +12,7 @@
 
 ## 目录结构
 
-项目全量目录层级介绍如下：
+项目全量目录层级介绍如下。
 
 ```text
 eigen/
@@ -43,7 +43,7 @@ eigen/
 
 每个发布版本特性变更详细信息，请参见《[版本说明书](docs/zh/release_notes.md)》。
 
-## 快速上手
+## 快速入门
 
 获取Eigen源码、应用对应版本补丁及使能KGemm的详细步骤，请参见《[快速入门](docs/zh/quick_start.md)》。
 

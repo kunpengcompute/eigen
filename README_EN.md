@@ -2,7 +2,7 @@
 
 ## Latest Updates
 
-- [2026-08-12]: Released AArch64 KGemm optimization patches for Eigen 3.4.0 and 5.0.0 with TensorContraction single-thread, thread-pool, and packing-reuse support.
+- [2026.09.30]: First official release with the AArch64 KGemm TensorContraction optimization patches for Eigen 3.4.0 and 5.0.0.
 
 ## Project Introduction
 
@@ -12,7 +12,7 @@ This project optimizes FP32 TensorContraction matrix multiplication on AArch64. 
 
 ## Directory Structure
 
-The full project directory structure is as follows:
+The full project directory structure is as follows.
 
 ```text
 eigen/

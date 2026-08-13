@@ -51,6 +51,6 @@
 | [Quick Start](quick_start.md) | Short enablement path and usage examples |
 | [API Reference](api_reference.md) | Macros, interfaces, and dispatch constraints |
 
-### Obtaining Documentation
+## Obtaining Documentation
 
-Chinese documentation is under `docs/zh`, and English documentation is under `docs/en`. Use the root `README.md` and `README_EN.md` as documentation entry points.
+You can browse and obtain the documentation by visiting the open-source repository (https://gitcode.com/boostkit/eigen).
