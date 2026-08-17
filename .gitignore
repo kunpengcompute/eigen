@@ -1,0 +1,8 @@
+# Local benchmark artifacts left by source branches.
+/bench/sgemm_test_suite/results/
+*.log
+
+# Editor and platform files.
+.DS_Store
+Thumbs.db
+*.tmp
