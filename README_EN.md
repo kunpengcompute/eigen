@@ -1,5 +1,7 @@
 # Introduction to Eigen TensorContraction KGemm
 
+English|[简体中文](README.md)
+
 ## Latest Updates
 
 - [2026.09.30]: First official release with the AArch64 KGemm TensorContraction optimization patches for Eigen 3.4.0 and 5.0.0.

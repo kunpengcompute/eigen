@@ -1,5 +1,7 @@
 # Eigen TensorContraction KGemm介绍
 
+简体中文|[English](./README_EN.md)
+
 ## 最新消息
 
 - [2026.09.30]：第一次正式发布，新增基于Eigen 3.4.0和5.0.0的ARM64 KGemm TensorContraction优化补丁。
