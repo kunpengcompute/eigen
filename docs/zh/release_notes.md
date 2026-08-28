@@ -53,4 +53,4 @@
 
 ## 获取文档的方法
 
-您可以通过访问开源仓（https://gitcode.com/boostkit/eigen）浏览和获取相关文档。
+您可以通过访问[开源仓](https://gitcode.com/boostkit/eigen)浏览和获取相关文档。

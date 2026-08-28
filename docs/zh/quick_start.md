@@ -20,20 +20,20 @@
 git clone -b main https://gitcode.com/boostkit/eigen eigen
 ```
 
-2. 克隆Eigen上游源码并检出目标版本。
+1. 克隆Eigen上游源码并检出目标版本。
 
 ```bash
 git clone https://gitlab.com/libeigen/eigen eigen-source
 git -C eigen-source checkout 5.0.0
 ```
 
-3. 使用 `git apply --check` 校验补丁可以应用。
+1. 使用 `git apply --check` 校验补丁可以应用。
 
 ```bash
 git -C eigen-source apply --check ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
 ```
 
-4. 使用 `git apply` 应用补丁。
+1. 使用 `git apply` 应用补丁。
 
 ```bash
 git -C eigen-source apply ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
@@ -99,6 +99,6 @@ g++ -O3 -DNDEBUG -march=armv8-a -DEIGEN_USE_THREADS \
 
 ## 修订记录
 
-| 发布日期 | 修订记录 |
-| --- | --- |
-| 2026-09-30 | 第一次正式发布。新增基于Eigen 3.4.0和5.0.0的ARM64 KGemm TensorContraction优化补丁。 |
+| 文档版本 | 发布日期 | 修改说明 |
+| --- | --- | --- |
+| 01 | 2026-09-30 | 第一次正式发布。 |
