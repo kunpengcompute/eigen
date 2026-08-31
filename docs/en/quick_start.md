@@ -1,7 +1,5 @@
 # Quick Start
 
-<!-- md-trans-meta sourceCommit=3c5af46324366cb6f7c09e9b8ffe0014626ff606 translatedAt=2026-08-28T08:54:20.951Z pushedAt=2026-08-29T06:18:58.541Z -->
-
 This document describes how to quickly enable and verify the Eigen TensorContraction KGemm optimization.
 
 ## Environment Requirements
@@ -20,28 +18,28 @@ The steps to obtain and apply the patch are as follows.
 
 1. Clone this repository to obtain the optimization patch.
 
-```bash
-git clone -b main https://gitcode.com/boostkit/eigen eigen
-```
+   ```bash
+   git clone -b main https://gitcode.com/boostkit/eigen eigen
+   ```
 
 2. Clone the Eigen upstream source code and check out the target version.
 
-```bash
-git clone https://gitlab.com/libeigen/eigen eigen-source
-git -C eigen-source checkout 5.0.0
-```
+   ```bash
+   git clone https://gitlab.com/libeigen/eigen eigen-source
+   git -C eigen-source checkout 5.0.0
+   ```
 
 3. Use `git apply --check` to verify that the patch can be applied.
 
-```bash
-git -C eigen-source apply --check ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
-```
+   ```bash
+   git -C eigen-source apply --check ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
+   ```
 
 4. Apply the patch using `git apply`.
 
-```bash
-git -C eigen-source apply ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
-```
+   ```bash
+   git -C eigen-source apply ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
+   ```
 
 For Eigen 3.4.0, use `3.4.0/eigen-3.4.0-kgemm.patch`. Define
 `EIGEN_NEON_USE_KGEMM=1` when compiling service code.
@@ -51,7 +49,7 @@ g++ -O3 -DNDEBUG -march=armv8-a -DEIGEN_NEON_USE_KGEMM=1 \
   -Ieigen-source your_program.cpp -o your_program
 ```
 
-When KGemm does not meet the dispatch conditions, it automatically falls back to the Eigen native kernel, requiring no branch handling on the app side.
+When KGemm does not meet the dispatch conditions, it automatically falls back to the Eigen open-source kernel, requiring no branch handling on the app side.
 
 ## Usage Examples (Including Header File Enablement)
 
@@ -79,14 +77,12 @@ out.device(device) = lhs.contract(rhs, dims);
 
 ## Usage Example (Performance Comparison)
 
-Use the same test program to compile the native NEON and KGemm versions separately.
+Use the same test program to compile the open-source NEON and KGemm versions separately.
 
 ```bash
-# Native NEON.
 g++ -O3 -DNDEBUG -march=armv8-a -DEIGEN_USE_THREADS -Ieigen-source \
   tensor_contraction_test.cpp -pthread -o test_neon
 
-# KGemm NEON
 g++ -O3 -DNDEBUG -march=armv8-a -DEIGEN_USE_THREADS \
   -DEIGEN_NEON_USE_KGEMM=1 -Ieigen-source \
   tensor_contraction_test.cpp -pthread -o test_kgemm
@@ -104,4 +100,4 @@ For installation, macro definitions, and fallback conditions, see [Installation 
 
 | Date | Description |
 | --- | --- |
-| 2026-09-30 | This is the first official release. Added AArch64 KGemm TensorContraction optimization patches for Eigen 3.4.0 and 5.0.0. |
+| 2026-09-30 | This is the first official release. |

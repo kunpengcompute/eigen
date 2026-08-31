@@ -1,7 +1,5 @@
 # Installation Guide
 
-<!-- md-trans-meta sourceCommit=3c5af46324366cb6f7c09e9b8ffe0014626ff606 translatedAt=2026-08-28T08:54:24.086Z pushedAt=2026-08-29T06:39:40.031Z -->
-
 This document describes how to apply the TensorContraction KGemm optimization patches to Eigen 3.4.0, 5.0.0, and compatible versions.
 
 ## Environment Requirements
@@ -22,7 +20,7 @@ This document describes how to apply the TensorContraction KGemm optimization pa
 ```bash
 git clone -b main https://gitcode.com/boostkit/eigen eigen
 git clone https://gitlab.com/libeigen/eigen eigen-source
-git -C eigen-source checkout 5.0.0          # or 3.4.0
+git -C eigen-source checkout 5.0.0         
 git -C eigen-source apply --check ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
 git -C eigen-source apply ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
 ```
@@ -59,7 +57,7 @@ For multi-threaded testing, also add `-DEIGEN_USE_THREADS` and `-pthread`.
 
 ## Running Tests
 
-The release patches do not include test programs. You can use service-side TensorContraction test cases or Eigen upstream tests, building native NEON and KGemm configurations separately to compare correctness and performance. An example of KGemm build parameters is shown below.
+The release patches do not include test programs. You can use service-side TensorContraction test cases or Eigen upstream tests, building open-source NEON and KGemm configurations separately to compare correctness and performance. An example of KGemm build parameters is shown below.
 
 ```bash
 g++ -O3 -DNDEBUG -march=armv8-a -DEIGEN_USE_THREADS \
@@ -76,7 +74,7 @@ First confirm that the current source code matches the Eigen version indicated b
 
 ### Why does KGemm not take effect after the macro is defined?
 
-KGemm applies only to TensorContraction with AArch64 NEON, FP32, and non-transposed layout, and is subject to a minimum dimension threshold. Other combinations automatically fall back to the native Eigen path.
+KGemm applies only to TensorContraction with AArch64 NEON, FP32, and non-transposed layout, and is subject to a minimum dimension threshold. Other combinations automatically fall back to the open-source Eigen path.
 
 ### How do I enable multithreading?
 
@@ -86,4 +84,4 @@ Define `EIGEN_USE_THREADS`, use `Eigen::ThreadPoolDevice` to execute the contrac
 
 | Date | Description |
 | --- | --- |
-| 2026-09-30 | This is the first official release. Added the AArch64 KGemm TensorContraction optimization patches for Eigen 3.4.0 and 5.0.0. |
+| 2026-09-30 | This is the first official release. |

@@ -1,7 +1,5 @@
 # Eigen TensorContraction KGemm
 
-<!-- md-trans-meta sourceCommit=3c5af46324366cb6f7c09e9b8ffe0014626ff606 translatedAt=2026-08-28T08:54:23.296Z pushedAt=2026-08-29T03:10:37.356Z -->
-
 ## Latest News
 
 - [2026-09-30]: First official release. Added AArch64 KGemm TensorContraction optimization patches for Eigen 3.4.0 and 5.0.0.
@@ -10,7 +8,7 @@
 
 [Eigen](https://gitlab.com/libeigen/eigen) is a C++ template library for linear algebra, matrix, and vector operations, providing rich functionality including the Tensor module.
 
-This project optimizes the FP32 matrix multiplication performance of Eigen TensorContraction on the AArch64 architecture by integrating NEON KGemm into Eigen as a `TensorContractionKernel` specialization, supporting both `DefaultDevice` and `ThreadPoolDevice`. Expressions that do not meet the KGemm selection criteria will fall back to the native Eigen implementation.
+This project optimizes the FP32 matrix multiplication performance of Eigen TensorContraction on the AArch64 architecture by integrating NEON KGemm into Eigen as a `TensorContractionKernel` specialization, supporting both `DefaultDevice` and `ThreadPoolDevice`. Expressions that do not meet the KGemm selection criteria will fall back to the open-source  Eigen implementation.
 
 ## Directory Structure
 
@@ -49,9 +47,9 @@ For detailed information on feature changes in each release, see [Release Notes]
 
 For detailed steps on obtaining the Eigen source code, applying the corresponding patch, and enabling KGemm, see [Quick Start](docs/en/quick_start.md).
 
-## Documentation
+## Learning Documentation
 
-| Resource Name | Description |
+| Learning Resource Name | Description |
 | --------- | --------- |
 | [Installation Guide](./docs/en/installation_guide.md) | Provides the steps for obtaining, applying, compiling, and verifying the Eigen AArch64 KGemm optimization patch. |
 | [Quick Start](./docs/en/quick_start.md) | Provides patch selection, KGemm enabling, and TensorContraction examples. |

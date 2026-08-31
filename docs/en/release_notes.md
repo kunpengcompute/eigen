@@ -1,7 +1,5 @@
 # Release Notes
 
-<!-- md-trans-meta sourceCommit=3c5af46324366cb6f7c09e9b8ffe0014626ff606 translatedAt=2026-08-28T08:54:23.758Z pushedAt=2026-08-29T03:47:56.596Z -->
-
 ## Version Compatibility Notes
 
 | Patch Directory | Baseline Version | Compatibility Notes |
@@ -11,12 +9,30 @@
 
 ### Product Version Information
 
-| Item | Content |
-| --- | --- |
-| Name | Eigen TensorContraction KGemm Optimization Patch |
-| Current Version | V1.0.0 |
-| Release Date | 2026-08-12 |
-| Open Source License | Mozilla Public License 2.0 |
+<a name="table62675726"></a>
+
+<table><tbody><tr id="row41561572"><th class="firstcol" valign="top" width="42.17%" id="mcps1.1.3.1.1"><p id="p11044137"><a name="p11044137"></a><a name="p11044137"></a>Product Name</p>
+</th>
+<td class="cellrowborder" valign="top" width="57.830000000000005%" headers="mcps1.1.3.1.1 "><p id="p1597721693713"><a name="p1597721693713"></a><a name="p1597721693713"></a>Kunpeng BoostKit</p>
+</td>
+</tr>
+<tr id="row24726251"><th class="firstcol" valign="top" width="42.17%" id="mcps1.1.3.2.1"><p id="p56669300"><a name="p56669300"></a><a name="p56669300"></a>Product Version</p>
+</th>
+<td class="cellrowborder" valign="top" width="57.830000000000005%" headers="mcps1.1.3.2.1 "><p id="p11923034"><a name="p11923034"></a><a name="p11923034"></a><span id="text14311218114"><a name="text14311218114"></a><a name="text14311218114"></a>26.2.RC1</span></p>
+</td>
+</tr>
+<tr id="row1930811171892"><th class="firstcol" valign="top" width="42.17%" id="mcps1.1.3.3.1"><p id="p2030912172097"><a name="p2030912172097"></a><a name="p2030912172097"></a>Software Name</p>
+</th>
+<td class="cellrowborder" valign="top" width="57.830000000000005%" headers="mcps1.1.3.3.1 "><p id="p1730912179911"><a name="p1730912179911"></a><a name="p1730912179911"></a><span id="text17191017111119"><a name="text17191017111119"></a><a name="text17191017111119"></a>Eigen TensorContraction KGemm</span></p>
+</td>
+</tr>
+<tr id="row19308111718"><th class="firstcol" valign="top" width="42.17%" id="mcps1.1.3.3.1"><p id="p2030912172097"><a name="p2030912172097"></a><a name="p2030912172097"></a>Software Version</p>
+</th>
+<td class="cellrowborder" valign="top" width="57.830000000000005%" headers="mcps1.1.3.3.1 "><p id="p1730912179911"><a name="p1730912179911"></a><a name="p1730912179911"></a><span id="text17191017111119"><a name="text17191017111119"></a><a name="text17191017111119"></a>V1.0.0</span></p>
+</td>
+</tr>
+</tbody>
+</table>
 
 ### OS, Compiler, and CPU
 
@@ -31,7 +47,7 @@
 
 ### V1.0.0
 
-1. Integrated `kgemm_neon_fp32_nn` into the TensorContraction dispatch layer while retaining the Eigen native kernel fallback path.
+1. Integrated `kgemm_neon_fp32_nn` into the TensorContraction dispatch layer while retaining the Eigen open-source kernel fallback path.
 
 2. Added `TensorContractionKGemm.h` to isolate KGemm adaptation, threshold, and multithreading logic.
 
@@ -43,7 +59,7 @@
 
 1. KGemm is enabled only on AArch64 NEON FP32 and the supported NN data layout.
 
-2. Contractions of small sizes or those that do not meet the threshold automatically fall back to the native Eigen implementation.
+2. Contractions of small sizes or those that do not meet the threshold automatically fall back to the open-source Eigen implementation.
 
 3. The patch directory only lists Eigen versions that have been verified. For other versions, run `git apply --check` first and complete correctness testing before applying.
 
