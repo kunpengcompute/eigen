@@ -53,4 +53,4 @@
 
 ## Obtaining Documentation
 
-You can browse and obtain the documentation by visiting the open-source repository (https://gitcode.com/boostkit/eigen).
+You can browse and obtain the documentation by visiting the open-source repository (<https://gitcode.com/boostkit/eigen>).

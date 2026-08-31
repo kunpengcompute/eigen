@@ -16,22 +16,22 @@ To obtain and apply the patch, follow these steps.
 
 1. Clone this repository to get the optimization patches.
 
-```bash
-git clone -b main https://gitcode.com/boostkit/eigen eigen
-```
+   ```bash
+   git clone -b main https://gitcode.com/boostkit/eigen eigen
+   ```
 
 2. Clone the upstream Eigen source and check out the target release.
 
-```bash
-git clone https://gitlab.com/libeigen/eigen eigen-source
-git -C eigen-source checkout 5.0.0
-```
+   ```bash
+   git clone https://gitlab.com/libeigen/eigen eigen-source
+   git -C eigen-source checkout 5.0.0
+   ```
 
 3. Verify that the patch applies with `git apply --check`.
 
-```bash
-git -C eigen-source apply --check ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
-```
+   ```bash
+   git -C eigen-source apply --check ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
+   ```
 
 4. Apply the patch with `git apply`.
 
