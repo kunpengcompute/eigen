@@ -1,57 +1,61 @@
 # Quick Start
 
-This chapter shows how to enable and verify the Eigen TensorContraction KGemm optimization.
+<!-- md-trans-meta sourceCommit=3c5af46324366cb6f7c09e9b8ffe0014626ff606 translatedAt=2026-08-28T08:54:20.951Z pushedAt=2026-08-29T06:18:58.541Z -->
+
+This document describes how to quickly enable and verify the Eigen TensorContraction KGemm optimization.
 
 ## Environment Requirements
 
-- AArch64 Linux and an ARMv8-A NEON processor.
+- An AArch64 Linux system with an Armv8-A NEON processor.
+
 - GCC or Clang with C++11 support.
-- Eigen 3.4.0, 5.0.0, or the verified-compatible 5.0.1 release.
+
+- Eigen 3.4.0, 5.0.0, or the confirmed compatible 5.0.1.
 
 ## Enabling AArch64 Optimization
 
-### Obtain and Apply a Patch to Upstream Eigen
+### Obtaining and Applying the Patch to Eigen Source Code
 
-To obtain and apply the patch, follow these steps.
+The steps to obtain and apply the patch are as follows.
 
-1. Clone this repository to get the optimization patches.
+1. Clone this repository to obtain the optimization patch.
 
-   ```bash
-   git clone -b main https://gitcode.com/boostkit/eigen eigen
-   ```
+```bash
+git clone -b main https://gitcode.com/boostkit/eigen eigen
+```
 
-2. Clone the upstream Eigen source and check out the target release.
+2. Clone the Eigen upstream source code and check out the target version.
 
-   ```bash
-   git clone https://gitlab.com/libeigen/eigen eigen-source
-   git -C eigen-source checkout 5.0.0
-   ```
+```bash
+git clone https://gitlab.com/libeigen/eigen eigen-source
+git -C eigen-source checkout 5.0.0
+```
 
-3. Verify that the patch applies with `git apply --check`.
+3. Use `git apply --check` to verify that the patch can be applied.
 
-   ```bash
-   git -C eigen-source apply --check ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
-   ```
+```bash
+git -C eigen-source apply --check ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
+```
 
-4. Apply the patch with `git apply`.
+4. Apply the patch using `git apply`.
 
 ```bash
 git -C eigen-source apply ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
 ```
 
 For Eigen 3.4.0, use `3.4.0/eigen-3.4.0-kgemm.patch`. Define
-`EIGEN_NEON_USE_KGEMM=1` when compiling the application.
+`EIGEN_NEON_USE_KGEMM=1` when compiling service code.
 
 ```bash
 g++ -O3 -DNDEBUG -march=armv8-a -DEIGEN_NEON_USE_KGEMM=1 \
   -Ieigen-source your_program.cpp -o your_program
 ```
 
-When KGemm dispatch conditions are not met, execution automatically falls back to Eigen's native kernel.
+When KGemm does not meet the dispatch conditions, it automatically falls back to the Eigen native kernel, requiring no branch handling on the app side.
 
-## Usage Example (Including Header File Enablement)
+## Usage Examples (Including Header File Enablement)
 
-- Application code continues to use the standard Tensor contraction API.
+- The app side continues to use the standard Tensor contraction interface.
 
 ```cpp
 #define EIGEN_USE_THREADS
@@ -65,7 +69,7 @@ Eigen::array<Eigen::IndexPair<int>, 1> dims = {Eigen::IndexPair<int>(1, 0)};
 out = lhs.contract(rhs, dims);
 ```
 
-- Use `Eigen::ThreadPoolDevice` for multithreaded execution.
+- Use `Eigen::ThreadPoolDevice` in multi-threaded scenarios.
 
 ```cpp
 Eigen::ThreadPool pool(thread_count);
@@ -75,10 +79,10 @@ out.device(device) = lhs.contract(rhs, dims);
 
 ## Usage Example (Performance Comparison)
 
-Build the same application test program in native NEON and KGemm configurations.
+Use the same test program to compile the native NEON and KGemm versions separately.
 
 ```bash
-# Native NEON
+# Native NEON.
 g++ -O3 -DNDEBUG -march=armv8-a -DEIGEN_USE_THREADS -Ieigen-source \
   tensor_contraction_test.cpp -pthread -o test_neon
 
@@ -88,16 +92,16 @@ g++ -O3 -DNDEBUG -march=armv8-a -DEIGEN_USE_THREADS \
   tensor_contraction_test.cpp -pthread -o test_kgemm
 ```
 
-## Verifying Optimization Effects
+## Verifying Optimization Results
 
-Run both executables with identical inputs, thread counts, repetitions, and CPU affinity. Confirm matching results before comparing GFLOPS or elapsed time.
+Run both with the same input, thread count, number of repetitions, and CPU pinning conditions. First confirm that the computation results are identical, then compare GFLOPS or elapsed time.
 
 ## FAQs
 
-For installation, macros, and fallback rules, see the [Installation Guide](installation_guide.md) and [API Reference](api_reference.md).
+For installation, macro definitions, and fallback conditions, see [Installation Guide](installation_guide.md) and [API Reference](api_reference.md).
 
-## Revision History
+## Change History
 
-| Release Date | Revision Record |
+| Date | Description |
 | --- | --- |
-| 2026-09-30 | First official release. Adds the AArch64 KGemm TensorContraction optimization patches for Eigen 3.4.0 and 5.0.0. |
+| 2026-09-30 | This is the first official release. Added AArch64 KGemm TensorContraction optimization patches for Eigen 3.4.0 and 5.0.0. |

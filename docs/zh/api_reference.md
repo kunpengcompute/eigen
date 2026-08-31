@@ -12,7 +12,7 @@ KGemm优化通过编译宏接入Eigen公开的TensorContraction表达式，不�
 |`EIGEN_NEON_KGEMM_REUSE_PACKING`|控制大尺寸TensorContraction是否复用调度器packing，默认值为1。|
 |`EIGEN_NEON_KGEMM_PACK_REUSE_MIN_MN`|packing复用的有效M/N最小值，默认值为768。|
 |`EIGEN_NEON_KGEMM_PACK_REUSE_MIN_K`|packing复用的K最小值，默认值为512。|
-|`Tensor::contract`|用户侧TensorContraction入口，接口与原生Eigen一致。|
+|`Tensor::contract`|用户侧TensorContraction入口，接口与开源Eigen一致。|
 |`kgemm_neon_fp32_nn`|内部连续FP32 NN GEMM驱动。|
 |`kgemm_neon_fp32_nn_packed`|内部已packing FP32 GEMM驱动。|
 
@@ -30,7 +30,7 @@ KGemm优化通过编译宏接入Eigen公开的TensorContraction表达式，不�
 -DEIGEN_NEON_USE_KGEMM=1
 ```
 
-所有包含Eigen Tensor头文件并参与同一程序链接的翻译单元应使用相同宏配置。未定义或设置为0时，使用Eigen原生实现。
+所有包含Eigen Tensor头文件并参与同一程序链接的翻译单元应使用相同宏配置。未定义或设置为0时，使用Eigen开源实现。
 
 ### EIGEN_NEON_KGEMM_REUSE_PACKING
 
@@ -81,7 +81,7 @@ output.device(device) = lhs.contract(rhs, dims);
 |mapper|左右输入支持RawAccess，内维连续，RHS未重排|
 |设备|`DefaultDevice`或`ThreadPoolDevice`|
 
-条件不满足时自动回退到Eigen原生packing和GEBP。
+条件不满足时自动回退到Eigen开源packing和GEBP。
 
 **示例**
 

@@ -1,69 +1,71 @@
 # API Reference
 
-## Interfaces
+<!-- md-trans-meta sourceCommit=3c5af46324366cb6f7c09e9b8ffe0014626ff606 translatedAt=2026-08-28T08:54:25.366Z pushedAt=2026-08-29T07:08:13.923Z -->
 
-The optimization integrates with Eigen's public TensorContraction expression through compile-time macros. It does not add a mandatory public Eigen API. The main configuration and internal interfaces are listed in [**Table 1** KGemm Interfaces](#KGemmInterfaces).
+## Interface Description
 
-**Table 1** KGemm Interfaces<a id="KGemmInterfaces"></a>
+The KGemm optimization integrates with Eigen's public TensorContraction expression through compile-time macros, without introducing any new public Eigen API that users must call. The main configuration and internal interfaces are shown in [**Table 1** KGemm Interface List](#kgemm-interface-list).
 
-|Interface Name|Interface Description|
+**Table 1** KGemm interface list<a id="kgemm-interface-list"></a>
+
+|Interface Name|Description|
 |--|--|
 |`EIGEN_NEON_USE_KGEMM`|Enables the AArch64 NEON KGemm TensorContraction specialization.|
-|`EIGEN_NEON_KGEMM_REUSE_PACKING`|Controls scheduler packing reuse for large contractions. The default is 1.|
-|`EIGEN_NEON_KGEMM_PACK_REUSE_MIN_MN`|Effective M/N threshold for packing reuse. The default is 768.|
-|`EIGEN_NEON_KGEMM_PACK_REUSE_MIN_K`|K threshold for packing reuse. The default is 512.|
-|`Tensor::contract`|User-facing TensorContraction entry point, unchanged from upstream Eigen.|
-|`kgemm_neon_fp32_nn`|Internal contiguous FP32 NN GEMM driver.|
-|`kgemm_neon_fp32_nn_packed`|Internal packed FP32 GEMM driver.|
+|`EIGEN_NEON_KGEMM_REUSE_PACKING`|Controls whether large TensorContraction operations reuse the scheduler packing. Default value: 1|
+|`EIGEN_NEON_KGEMM_PACK_REUSE_MIN_MN`|Minimum M/N value for packing reuse to take effect. Default value: 768|
+|`EIGEN_NEON_KGEMM_PACK_REUSE_MIN_K`|Minimum K value for packing reuse. Default value: 512|
+|`Tensor::contract`|User-side TensorContraction entry point, with an interface identical to native Eigen|
+|`kgemm_neon_fp32_nn`|Internal driver for contiguous FP32 NN GEMM|
+|`kgemm_neon_fp32_nn_packed`|Internal driver for pre-packed FP32 GEMM|
 
-## Compile-Time Macros
+## Compilation Macro Definitions
 
 ### EIGEN_NEON_USE_KGEMM
 
-**Function**
+**Macro Function**
 
-Registers the KGemm kernel specialization for eligible AArch64 NEON FP32 TensorContraction expressions.
+Registers the KGemm kernel specialization for AArch64 NEON FP32 TensorContraction when the conditions are met.
 
-**Definition**
+**Definition Method**
 
 ```text
 -DEIGEN_NEON_USE_KGEMM=1
 ```
 
-Use the same macro value for every translation unit that includes Eigen Tensor headers and is linked into the same program. If it is undefined or set to 0, Eigen uses its native implementation.
+All translation units that include Eigen tensor headers and participate in linking the same program should use the same macro configuration. When it is undefined or set to 0, the native Eigen implementation is used.
 
 ### EIGEN_NEON_KGEMM_REUSE_PACKING
 
-**Function**
+**Macro Function**
 
-Controls whether large KGemm contractions use TensorContraction shared block buffers to pack once and reuse the result.
+Controls whether large KGemm operations use the TensorContraction shared block buffer to perform packing once and reuse the result.
 
-**Definition**
+**Definition Method**
 
 ```text
 -DEIGEN_NEON_KGEMM_REUSE_PACKING=0
 ```
 
-The default is 1. Set it to 0 to build a no-reuse performance baseline.
+The default value is 1. Setting it to 0 builds a no-reuse performance comparison version.
 
-### Packing-Reuse Thresholds
+### Packing Reuse Threshold
 
 ```text
 -DEIGEN_NEON_KGEMM_PACK_REUSE_MIN_MN=768
 -DEIGEN_NEON_KGEMM_PACK_REUSE_MIN_K=512
 ```
 
-The packed path is selected only when both normalized effective M/N dimensions meet the M/N threshold and K meets the K threshold.
+The packed path is used only when the normalized effective M/N both reach the M/N threshold and K reaches the K threshold.
 
-## TensorContraction API
+## TensorContraction Interface
 
 ### Tensor::contract
 
-**Function**
+**Function Description**
 
-Contracts two tensors along the specified dimensions. The patch preserves Eigen's public interface and only changes the internal kernel for eligible expressions.
+Contracts two tensors along the specified dimensions. The patch keeps the public Eigen interfaces unchanged and only changes the internal kernel used when the selection conditions are met.
 
-**Invocation**
+**Call Form**
 
 ```cpp
 Eigen::array<Eigen::IndexPair<int>, 1> dims = {
@@ -71,17 +73,17 @@ Eigen::array<Eigen::IndexPair<int>, 1> dims = {
 output.device(device) = lhs.contract(rhs, dims);
 ```
 
-**Selection Policy**
+**Selection Conditions**
 
 |Condition|Requirement|
 |--|--|
-|Architecture|AArch64 with compiler NEON support|
-|Scalar type|Inputs and output are `float`|
+|Architecture|AArch64 with NEON enabled by the compiler|
+|Scalar type|Both input and output are `float`|
 |Expression|Two-dimensional, one contraction dimension, canonical contiguous storage|
-|Mapper|RawAccess for both inputs, contiguous inner dimension, RHS not reordered|
+|Mapper|Both left and right inputs support `RawAccess`, inner dimension contiguous, RHS not pre-reordered |
 |Device|`DefaultDevice` or `ThreadPoolDevice`|
 
-If any condition is not met, Eigen automatically falls back to its native packing and GEBP path.
+When the conditions are not met, it automatically falls back to Eigen's native packing and GEBP.
 
 **Example**
 
@@ -108,7 +110,7 @@ static inline void kgemm_neon_fp32_nn(
     long int m, long int n, long int k, long int addc);
 ```
 
-This interface consumes contiguous row-major NN matrix views. `addc=0` overwrites the output; a nonzero value accumulates into it. This is an Eigen internal interface without ABI stability guarantees.
+This interface accepts contiguous RowMajor NN matrix views. `addc=0` indicates overwriting the output, while a non-zero value indicates accumulation. It is an internal Eigen interface and provides no ABI stability guarantees.
 
 ### kgemm_neon_fp32_nn_packed
 
@@ -119,10 +121,10 @@ static inline void kgemm_neon_fp32_nn_packed(
     long int k, long int addc);
 ```
 
-`pa` uses four-row K-major panels and `pb` uses 16-column K-major panels. The TensorContraction scheduler invokes this interface; application code should not call it directly.
+`pa` uses a 4-row K-major panel layout, and `pb` uses a 16-column K-major panel layout. This interface is invoked by the TensorContraction scheduler and is not recommended for direct invocation by service code.
 
-## Revision History
+## Change History
 
-| Release Date | Revision Record |
+| Date | Description |
 | --- | --- |
-| 2026-09-30 | First official release. Adds the AArch64 KGemm TensorContraction optimization patches for Eigen 3.4.0 and 5.0.0. |
+| 2026-09-30 | This is the first official release. Added the AArch64 KGemm TensorContraction optimization patches for Eigen 3.4.0 and 5.0.0. |
