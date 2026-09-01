@@ -10,7 +10,7 @@
 
 [Eigen](https://gitlab.com/libeigen/eigen)是一款用于线性代数、矩阵和向量运算的C++模板库，提供包括Tensor模块在内的丰富功能。
 
-本项目针对Eigen TensorContraction在ARM64架构上的FP32矩阵乘性能进行优化，将NEON KGemm以`TensorContractionKernel`特化方式接入Eigen，并支持`DefaultDevice`和`ThreadPoolDevice`。不满足KGemm选择条件的表达式仍使用Eigen原生实现。
+本项目针对Eigen TensorContraction在ARM64架构上的FP32矩阵乘性能进行优化，将NEON KGemm以`TensorContractionKernel`特化方式接入Eigen，并支持`DefaultDevice`和`ThreadPoolDevice`。不满足KGemm选择条件的表达式仍使用Eigen开源实现。
 
 ## 目录结构
 
@@ -49,18 +49,18 @@ eigen/
 
 获取Eigen源码、应用对应版本补丁及使能KGemm的详细步骤，请参见《[快速入门](docs/zh/quick_start.md)》。
 
-## 文档
+## 学习文档
 
-| 资源名称 | 资源简介 |
+| 学习资源名称 | 资源简介 |
 | --------- | --------- |
-| [安装指南](./docs/zh/installation_guide.md) | 提供Eigen ARM64 KGemm优化补丁的获取、应用、编译和验证步骤。 |
-| [快速入门](./docs/zh/quick_start.md) | 提供补丁选择、KGemm使能和TensorContraction示例。 |
-| [版本说明书](./docs/zh/release_notes.md) | 提供补丁版本、基线、特性和已知限制。 |
-| [API参考](./docs/zh/api_reference.md) | 提供编译宏、Tensor API和内部KGemm接口说明。 |
+| [Eigen 安装指南](./docs/zh/installation_guide.md) | 提供Eigen ARM64 KGemm优化补丁的获取、应用、编译和验证步骤。 |
+| [Eigen 快速入门](./docs/zh/quick_start.md) | 提供补丁选择、KGemm使能和TensorContraction示例。 |
+| [Eigen 版本说明书](./docs/zh/release_notes.md) | 提供补丁版本、基线、特性和已知限制。 |
+| [Eigen API参考](./docs/zh/api_reference.md) | 提供编译宏、Tensor API和内部KGemm接口说明。 |
 
 ## 免责声明
 
-此代码仓仅对Eigen TensorContraction在ARM64处理器上的特定FP32矩阵乘路径进行性能优化，继承原生开源软件的设计与回退机制。任何漏洞与安全问题应由相应上游社区根据其响应机制解决。请密切关注Eigen上游社区发布的通知和版本更新。ARM64计算社区对软件漏洞及安全问题不承担任何责任。
+此代码仓仅对Eigen TensorContraction在ARM64处理器上的特定FP32矩阵乘路径进行性能优化，继承开源软件的设计与回退机制。任何漏洞与安全问题应由相应上游社区根据其响应机制解决。请密切关注Eigen上游社区发布的通知和版本更新。ARM64计算社区对软件漏洞及安全问题不承担任何责任。
 
 ## License
 
