@@ -65,10 +65,10 @@
 
 | 文档 | 说明 |
 | --- | --- |
-| [安装指南](installation_guide.md) | 环境、补丁应用、编译和测试方法 |
-| [快速入门](quick_start.md) | 最短启用流程和使用示例 |
-| [接口参考](api_reference.md) | 宏、接口和调度约束 |
+| [Eigen 安装指南](installation_guide.md) | 环境、补丁应用、编译和测试方法 |
+| [Eigen 快速入门](quick_start.md) | 最短启用流程和使用示例 |
+| [Eigen API参考](api_reference.md) | 宏、接口和调度约束 |
 
 ## 获取文档的方法
 
-您可以通过访问[开源仓](https://gitcode.com/boostkit/eigen)浏览和获取相关文档。
+您可以通过访问[Eigen 开源仓](https://gitcode.com/boostkit/eigen)浏览和获取相关文档。

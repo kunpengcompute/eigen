@@ -71,10 +71,10 @@
 
 | Document | Description |
 | --- | --- |
-| [Installation Guide](installation_guide.md) | Environment, patch application, compilation, and testing methods |
-| [Quick Start](quick_start.md) | Shortest enablement process and usage examples |
-| [API Reference](api_reference.md) | Macros, interfaces, and dispatch constraints |
+| [Eigen Installation Guide](installation_guide.md) | Environment, patch application, compilation, and testing methods |
+| [Eigen Quick Start](quick_start.md) | Shortest enablement process and usage examples |
+| [Eigen API Reference](api_reference.md) | Macros, interfaces, and dispatch constraints |
 
 ## Obtaining the Documentation
 
-You can browse and obtain the relevant documentation by visiting the [open-source repository](https://gitcode.com/boostkit/eigen).
+You can browse and obtain the relevant documentation by visiting the [Eigen open-source repository](https://gitcode.com/boostkit/eigen).

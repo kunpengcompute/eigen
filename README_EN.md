@@ -51,10 +51,10 @@ For detailed steps on obtaining the Eigen source code, applying the correspondin
 
 | Learning Resource Name | Description |
 | --------- | --------- |
-| [Installation Guide](./docs/en/installation_guide.md) | Provides the steps for obtaining, applying, compiling, and verifying the Eigen AArch64 KGemm optimization patch. |
-| [Quick Start](./docs/en/quick_start.md) | Provides patch selection, KGemm enabling, and TensorContraction examples. |
-| [Release Notes](./docs/en/release_notes.md) | Provides the patch version, baseline, features, and known limitations. |
-| [API Reference](./docs/en/api_reference.md) | Provides descriptions of compilation macros, Tensor APIs, and internal KGemm interfaces. |
+| [Eigen Installation Guide](./docs/en/installation_guide.md) | Provides the steps for obtaining, applying, compiling, and verifying the Eigen AArch64 KGemm optimization patch. |
+| [Eigen Quick Start](./docs/en/quick_start.md) | Provides patch selection, KGemm enabling, and TensorContraction examples. |
+| [Eigen Release Notes](./docs/en/release_notes.md) | Provides the patch version, baseline, features, and known limitations. |
+| [Eigen API Reference](./docs/en/api_reference.md) | Provides descriptions of compilation macros, Tensor APIs, and internal KGemm interfaces. |
 
 ## Disclaimer
 
