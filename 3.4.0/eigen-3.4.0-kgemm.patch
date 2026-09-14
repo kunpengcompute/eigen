@@ -1,9 +1,9 @@
 diff --git a/Eigen/src/Core/arch/NEON/KGemmNeonKernel.h b/Eigen/src/Core/arch/NEON/KGemmNeonKernel.h
 new file mode 100644
-index 0000000000000000000000000000000000000000..62da8112a02928e3cfb0912a2447c50b1c742b38
+index 0000000000000000000000000000000000000000..a5b547c302968c851866c06d4c94ddf3f3192266
 --- /dev/null
 +++ b/Eigen/src/Core/arch/NEON/KGemmNeonKernel.h
-@@ -0,0 +1,2796 @@
+@@ -0,0 +1,2815 @@
 +#ifndef KGEMM_NEON_KERNEL_H
 +#define KGEMM_NEON_KERNEL_H
 +
@@ -2243,6 +2243,10 @@ index 0000000000000000000000000000000000000000..62da8112a02928e3cfb0912a2447c50b
 +#include <stdlib.h>
 +#include <string.h>
 +
++#ifdef EIGEN_EXCEPTIONS
++#include <new>
++#endif
++
 +#ifndef thread_local
 +#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 +#define thread_local _Thread_local
@@ -2261,14 +2265,29 @@ index 0000000000000000000000000000000000000000..62da8112a02928e3cfb0912a2447c50b
 +    size_t cap;
 +};
 +
++// Allocation failure must not escape as a null block or a partial GEMM result.
++// The standalone kernel (without Eigen exception support) also fails explicitly.
++static inline __attribute__((noreturn)) void kgemm_allocation_failure()
++{
++#ifdef EIGEN_EXCEPTIONS
++    throw std::bad_alloc();
++#else
++    abort();
++#endif
++}
++
 +static inline float *get_scratch(struct kp_gemm_aligned_scratch *s, size_t count)
 +{
++    // Check both the element-to-byte conversion and the alignment rounding.
++    if (count > (((size_t)-1) - 63u) / sizeof(float)) {
++        kgemm_allocation_failure();
++    }
 +    if (s->cap < count) {
 +        size_t bytes = count * sizeof(float);
 +        bytes = (bytes + 63u) & ~((size_t)63u);
 +        float *np = (float *)aligned_alloc(64, bytes);
 +        if (np == NULL) {
-+            return NULL;
++            kgemm_allocation_failure();
 +        }
 +        free(s->p);
 +        s->p = np;
@@ -2880,10 +2899,10 @@ index 8b35f7985160a0424ec78aebe59e58b7f2c475fe..11e51c86d4f12fd63abbb7c095ec896b
      const BlockMemHandle packed_mem =
 diff --git a/unsupported/Eigen/CXX11/src/Tensor/TensorContractionKGemm.h b/unsupported/Eigen/CXX11/src/Tensor/TensorContractionKGemm.h
 new file mode 100644
-index 0000000000000000000000000000000000000000..c67bb44e6808a91f954a70a729b3bcefc4781779
+index 0000000000000000000000000000000000000000..24201daea7aec9ea5de98f958d370eed721bc6d4
 --- /dev/null
 +++ b/unsupported/Eigen/CXX11/src/Tensor/TensorContractionKGemm.h
-@@ -0,0 +1,437 @@
+@@ -0,0 +1,441 @@
 +// This file is part of Eigen, a lightweight C++ template library
 +// for linear algebra.
 +//
@@ -3050,7 +3069,9 @@ index 0000000000000000000000000000000000000000..c67bb44e6808a91f954a70a729b3bcef
 +    const BlockSizes sizes = computeBlockSizes(bm, bk, bn);
 +    char* memory = static_cast<char*>(
 +        device.allocate(sizes.lhs_bytes + sizes.rhs_bytes));
-+    eigen_assert(memory != NULL);
++    // A custom ThreadPool allocator may return null instead of throwing.
++    // Check before constructing block pointers, including in release builds.
++    if (memory == NULL) kgemm_allocation_failure();
 +    *lhs_block = reinterpret_cast<float*>(memory);
 +    *rhs_block = reinterpret_cast<float*>(memory + sizes.lhs_bytes);
 +    return memory;
@@ -3070,7 +3091,9 @@ index 0000000000000000000000000000000000000000..c67bb44e6808a91f954a70a729b3bcef
 +    char* memory = static_cast<char*>(device.allocate(
 +        (num_lhs * sizes.lhs_bytes + num_rhs * sizes.rhs_bytes) *
 +        num_slices));
-+    eigen_assert(memory != NULL);
++    // A custom ThreadPool allocator may return null instead of throwing.
++    // Check before constructing block pointers, including in release builds.
++    if (memory == NULL) kgemm_allocation_failure();
 +    char* next = memory;
 +    for (StorageIndex slice = 0; slice < num_slices; ++slice) {
 +      if (num_lhs > 0) lhs_blocks[slice].resize(num_lhs);
