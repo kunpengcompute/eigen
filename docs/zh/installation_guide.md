@@ -21,11 +21,26 @@
 git clone -b main https://gitcode.com/boostkit/eigen eigen
 git clone https://gitlab.com/libeigen/eigen eigen-source
 git -C eigen-source checkout 5.0.0          
+(cd eigen/5.0.0 && sha256sum -c SHA256SUMS) || exit 1
 git -C eigen-source apply --check ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
 git -C eigen-source apply ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
 ```
 
 Eigen3.4.0请将上述路径替换为`3.4.0/eigen-3.4.0-kgemm.patch`。
+
+### 补丁完整性校验
+
+请从可信的同一发布版本获取补丁及 `SHA256SUMS`。从发布仓库根目录执行对应版本的命令：
+
+```bash
+(cd 5.0.0 && sha256sum -c SHA256SUMS) || exit 1
+# 使用 3.4.0 时：
+(cd 3.4.0 && sha256sum -c SHA256SUMS) || exit 1
+```
+
+仅在输出补丁文件名及 `OK` 且命令退出码为 0 后继续应用。若出现 `FAILED`、文件缺失或非零退出码，
+停止应用，重新从可信来源获取补丁与校验文件并再次验证。`git apply --check` 只检查补丁适用性，
+不能替代 SHA-256 完整性检查；同源 SHA-256 清单本身也不等同于发布者的数字签名。
 
 ### 安装步骤
 

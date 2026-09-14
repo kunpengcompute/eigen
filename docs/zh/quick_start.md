@@ -27,9 +27,10 @@
    git -C eigen-source checkout 5.0.0
    ```
 
-3. 使用`git apply --check`校验补丁可以应用。
+3. 先校验补丁完整性，再使用`git apply --check`确认补丁可以应用。
 
    ```bash
+   (cd eigen/5.0.0 && sha256sum -c SHA256SUMS) || exit 1
    git -C eigen-source apply --check ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
    ```
 
@@ -47,6 +48,20 @@ g++ -O3 -DNDEBUG -march=armv8-a -DEIGEN_NEON_USE_KGEMM=1 \
 ```
 
 KGemm不满足调度条件时会自动回退到Eigen开源kernel，无需应用侧分支处理。
+
+### 补丁完整性校验
+
+请从可信的同一发布版本获取补丁及 `SHA256SUMS`。从发布仓库根目录执行对应版本的命令：
+
+```bash
+(cd 5.0.0 && sha256sum -c SHA256SUMS) || exit 1
+# 使用 3.4.0 时：
+(cd 3.4.0 && sha256sum -c SHA256SUMS) || exit 1
+```
+
+仅在输出补丁文件名及 `OK` 且命令退出码为 0 后继续应用。若出现 `FAILED`、文件缺失或非零退出码，
+停止应用，重新从可信来源获取补丁与校验文件并再次验证。`git apply --check` 只检查补丁适用性，
+不能替代 SHA-256 完整性检查；同源 SHA-256 清单本身也不等同于发布者的数字签名。
 
 ## 使用示例（包含头文件使能方法示例）
 
@@ -72,22 +87,24 @@ Eigen::ThreadPoolDevice device(&pool, thread_count);
 out.device(device) = lhs.contract(rhs, dims);
 ```
 
-## 使用示例（性能对比）
-
-使用同一业务测试程序分别编译开源NEON和KGemm版本。
-
-```bash
-g++ -O3 -DNDEBUG -march=armv8-a -DEIGEN_USE_THREADS -Ieigen-source \
-  tensor_contraction_test.cpp -pthread -o test_neon
-
-g++ -O3 -DNDEBUG -march=armv8-a -DEIGEN_USE_THREADS \
-  -DEIGEN_NEON_USE_KGEMM=1 -Ieigen-source \
-  tensor_contraction_test.cpp -pthread -o test_kgemm
-```
-
 ## 验证优化效果
 
-使用相同输入、线程数、重复次数和CPU绑定条件运行两者，先确认计算结果一致，再比较GFLOPS或耗时。
+使用相同输入、线程数、重复次数和CPU绑定条件运行NEON和KGemm版本，先确认计算结果一致，再比较GFLOPS或耗时。
+
+### 实测性能参考
+
+CPU：Kunpeng 950；操作系统：openEuler 24.03 LTS-SP3。
+
+| 线程 | M×K×N | NEON 毫秒 | KGEMM 毫秒 | 加速比 |
+| ---: | --- | ---: | ---: | ---: |
+| 1 | 128×128×128 | 0.0899 | 0.0735 | 1.223× |
+| 1 | 512×512×512 | 5.5757 | 4.5462 | 1.226× |
+| 1 | 768×512×768 | 12.4079 | 10.1028 | 1.228× |
+| 1 | 781×513×783 | 13.3818 | 10.6886 | 1.252× |
+| 4 | 128×128×128 | 0.0512 | 0.0340 | 1.505× |
+| 4 | 512×512×512 | 1.8540 | 1.3577 | 1.370× |
+| 4 | 768×512×768 | 3.5875 | 2.9963 | 1.197× |
+| 4 | 781×513×783 | 3.7806 | 3.0478 | 1.241× |
 
 ## 常见问题
 
