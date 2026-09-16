@@ -2,19 +2,19 @@
 
 ## 接口说明
 
-KGemm优化通过编译宏接入Eigen公开的TensorContraction表达式，不新增用户必须调用的公开Eigen API。主要配置和内部接口如[**表 1** KGemm接口列表](#KGemm接口列表)所示。
+KGemm优化通过编译宏接入Eigen公开的TensorContraction表达式，不新增用户必须调用的公开Eigen API。主要配置和内部接口如[表 1 KGemm接口列表](#KGemm接口列表)所示。
 
 **表 1** KGemm接口列表<a id="KGemm接口列表"></a>
 
 |接口名称|接口说明|
 |--|--|
-|`EIGEN_NEON_USE_KGEMM`|启用ARM64 NEON KGemm TensorContraction特化。|
-|`EIGEN_NEON_KGEMM_REUSE_PACKING`|控制大尺寸TensorContraction是否复用调度器packing，默认值为1。|
-|`EIGEN_NEON_KGEMM_PACK_REUSE_MIN_MN`|packing复用的有效M/N最小值，默认值为768。|
-|`EIGEN_NEON_KGEMM_PACK_REUSE_MIN_K`|packing复用的K最小值，默认值为512。|
-|`Tensor::contract`|用户侧TensorContraction入口，接口与开源Eigen一致。|
-|`kgemm_neon_fp32_nn`|内部连续FP32 NN GEMM驱动。|
-|`kgemm_neon_fp32_nn_packed`|内部已packing FP32 GEMM驱动。|
+|EIGEN_NEON_USE_KGEMM|启用ARM64 NEON KGemm TensorContraction特化。|
+|EIGEN_NEON_KGEMM_REUSE_PACKING|控制大尺寸TensorContraction是否复用调度器packing，默认值为1。|
+|EIGEN_NEON_KGEMM_PACK_REUSE_MIN_MN|packing复用的有效M/N最小值，默认值为768。|
+|EIGEN_NEON_KGEMM_PACK_REUSE_MIN_K|packing复用的K最小值，默认值为512。|
+|Tensor::contract|用户侧TensorContraction入口，接口与开源Eigen一致。|
+|kgemm_neon_fp32_nn|内部连续FP32 NN GEMM驱动。|
+|kgemm_neon_fp32_nn_packed|内部已packing FP32 GEMM驱动。|
 
 ## 编译宏定义
 

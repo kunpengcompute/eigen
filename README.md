@@ -53,10 +53,10 @@ eigen/
 
 | 学习资源名称 | 资源简介 |
 | --------- | --------- |
-| [Eigen 安装指南](./docs/zh/installation_guide.md) | 提供Eigen ARM64 KGemm优化补丁的获取、应用、编译和验证步骤。 |
-| [Eigen 快速入门](./docs/zh/quick_start.md) | 提供补丁选择、KGemm使能和TensorContraction示例。 |
-| [Eigen 版本说明书](./docs/zh/release_notes.md) | 提供补丁版本、基线、特性和已知限制。 |
-| [Eigen API参考](./docs/zh/api_reference.md) | 提供编译宏、Tensor API和内部KGemm接口说明。 |
+| [《Eigen 安装指南》](./docs/zh/installation_guide.md) | 提供Eigen ARM64 KGemm优化补丁的获取、应用、编译和验证步骤。 |
+| [《Eigen 快速入门》](./docs/zh/quick_start.md) | 提供补丁选择、KGemm使能和TensorContraction示例。 |
+| [《Eigen 版本说明书》](./docs/zh/release_notes.md) | 提供补丁版本、基线、特性和已知限制。 |
+| [《Eigen API参考》](./docs/zh/api_reference.md) | 提供编译宏、Tensor API和内部KGemm接口说明。 |
 
 ## 免责声明
 

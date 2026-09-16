@@ -52,25 +52,25 @@ KGemm不满足调度条件时会自动回退到Eigen开源kernel，无需应用�
 
 - 应用侧继续使用标准 Tensor contraction 接口。
 
-```cpp
-#define EIGEN_USE_THREADS
-#define EIGEN_NEON_USE_KGEMM 1
-#include <unsupported/Eigen/CXX11/Tensor>
+   ```cpp
+   #define EIGEN_USE_THREADS
+   #define EIGEN_NEON_USE_KGEMM 1
+   #include <unsupported/Eigen/CXX11/Tensor>
 
-Eigen::Tensor<float, 2, Eigen::RowMajor> lhs(m, k);
-Eigen::Tensor<float, 2, Eigen::RowMajor> rhs(k, n);
-Eigen::Tensor<float, 2, Eigen::RowMajor> out(m, n);
-Eigen::array<Eigen::IndexPair<int>, 1> dims = {Eigen::IndexPair<int>(1, 0)};
-out = lhs.contract(rhs, dims);
-```
+   Eigen::Tensor<float, 2, Eigen::RowMajor> lhs(m, k);
+   Eigen::Tensor<float, 2, Eigen::RowMajor> rhs(k, n);
+   Eigen::Tensor<float, 2, Eigen::RowMajor> out(m, n);
+   Eigen::array<Eigen::IndexPair<int>, 1> dims = {Eigen::IndexPair<int>(1, 0)};
+   out = lhs.contract(rhs, dims);
+   ```
 
 - 多线程场景使用`Eigen::ThreadPoolDevice`。
 
-```cpp
-Eigen::ThreadPool pool(thread_count);
-Eigen::ThreadPoolDevice device(&pool, thread_count);
-out.device(device) = lhs.contract(rhs, dims);
-```
+   ```cpp
+   Eigen::ThreadPool pool(thread_count);
+   Eigen::ThreadPoolDevice device(&pool, thread_count);
+   out.device(device) = lhs.contract(rhs, dims);
+   ```
 
 ## 使用示例（性能对比）
 

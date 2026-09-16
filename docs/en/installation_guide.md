@@ -68,17 +68,17 @@ g++ -O3 -DNDEBUG -march=armv8-a -DEIGEN_USE_THREADS \
 
 ## FAQs
 
-### What should I do if the patch cannot be applied?
+**Question**: What should I do if the patch cannot be applied?
 
-First confirm that the current source code matches the Eigen version indicated by the patch, and use `git apply --check` to locate conflicts. The Eigen 5.0.0 patch has been verified to apply directly to the official 5.0.1 tag.
+**Answer**: First confirm that the current source code matches the Eigen version indicated by the patch, and use `git apply --check` to locate conflicts. The Eigen 5.0.0 patch has been verified to apply directly to the official 5.0.1 tag.
 
-### Why does KGemm not take effect after the macro is defined?
+**Question**: Why does KGemm not take effect after the macro is defined?
 
-KGemm applies only to TensorContraction with AArch64 NEON, FP32, and non-transposed layout, and is subject to a minimum dimension threshold. Other combinations automatically fall back to the open-source Eigen path.
+**Answer**: KGemm applies only to TensorContraction with AArch64 NEON, FP32, and non-transposed layout, and is subject to a minimum dimension threshold. Other combinations automatically fall back to the open-source Eigen path.
 
-### How do I enable multithreading?
+**Question**: How do I enable multithreading?
 
-Define `EIGEN_USE_THREADS`, use `Eigen::ThreadPoolDevice` to execute the contraction, and add `-pthread` when linking.
+**Answer**: Define `EIGEN_USE_THREADS`, use `Eigen::ThreadPoolDevice` to execute the contraction, and add `-pthread` when linking.
 
 ## Change History
 
