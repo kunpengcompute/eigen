@@ -4,8 +4,8 @@
 
 | Patch Directory | Baseline Version | Compatibility Notes |
 | --- | --- | --- |
-| `3.4.0` | Eigen 3.4.0 | Generated and verified against the 3.4.0 source code |
-| `5.0.0` | Eigen 5.0.0 | Generated against 5.0.0; verified to apply to the official 5.0.1 tag |
+| 3.4.0 | Eigen 3.4.0 | Generated and verified against the 3.4.0 source code |
+| 5.0.0 | Eigen 5.0.0 | Generated against 5.0.0; verified to apply to the official 5.0.1 tag |
 
 ### Product Version Information
 
@@ -69,11 +69,11 @@
 
 ### V1.0.0 Documents
 
-| Document | Description |
-| --- | --- |
-| [Eigen Installation Guide](installation_guide.md) | Environment, patch application, compilation, and testing methods |
-| [Eigen Quick Start](quick_start.md) | Shortest enablement process and usage examples |
-| [Eigen API Reference](api_reference.md) | Macros, interfaces, and dispatch constraints |
+| Document Name | Description | Delivery Format |
+| --- | --- | --- |
+| [Eigen Installation Guide](installation_guide.md) | Environment, patch application, compilation, and testing methods | Open-source repository |
+| [Eigen Quick Start](quick_start.md) | Shortest enablement process and usage examples | Open-source repository |
+| [Eigen API Reference](api_reference.md) | Macros, interfaces, and dispatch constraints | Open-source repository |
 
 ## Obtaining the Documentation
 

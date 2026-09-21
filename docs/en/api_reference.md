@@ -8,13 +8,13 @@ The KGemm optimization integrates with Eigen's public TensorContraction expressi
 
 |Interface Name|Description|
 |--|--|
-|`EIGEN_NEON_USE_KGEMM`|Enables the AArch64 NEON KGemm TensorContraction specialization.|
-|`EIGEN_NEON_KGEMM_REUSE_PACKING`|Controls whether large TensorContraction operations reuse the scheduler packing. Default value: 1|
-|`EIGEN_NEON_KGEMM_PACK_REUSE_MIN_MN`|Minimum M/N value for packing reuse to take effect. Default value: 768|
-|`EIGEN_NEON_KGEMM_PACK_REUSE_MIN_K`|Minimum K value for packing reuse. Default value: 512|
-|`Tensor::contract`|User-side TensorContraction entry point, with an interface identical to open-source Eigen|
-|`kgemm_neon_fp32_nn`|Internal driver for contiguous FP32 NN GEMM|
-|`kgemm_neon_fp32_nn_packed`|Internal driver for pre-packed FP32 GEMM|
+|EIGEN_NEON_USE_KGEMM|Enables the AArch64 NEON KGemm TensorContraction specialization.|
+|EIGEN_NEON_KGEMM_REUSE_PACKING|Controls whether large TensorContraction operations reuse the scheduler packing. Default value: 1|
+|EIGEN_NEON_KGEMM_PACK_REUSE_MIN_MN|Minimum M/N value for packing reuse to take effect. Default value: 768|
+|EIGEN_NEON_KGEMM_PACK_REUSE_MIN_K|Minimum K value for packing reuse. Default value: 512|
+|Tensor::contract|User-side TensorContraction entry point, with an interface identical to open-source Eigen|
+|kgemm_neon_fp32_nn|Internal driver for contiguous FP32 NN GEMM|
+|kgemm_neon_fp32_nn_packed|Internal driver for pre-packed FP32 GEMM|
 
 ## Compilation Macro Definitions
 

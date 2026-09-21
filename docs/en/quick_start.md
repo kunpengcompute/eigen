@@ -55,25 +55,25 @@ When KGemm does not meet the dispatch conditions, it automatically falls back to
 
 - The app side continues to use the standard Tensor contraction interface.
 
-```cpp
-#define EIGEN_USE_THREADS
-#define EIGEN_NEON_USE_KGEMM 1
-#include <unsupported/Eigen/CXX11/Tensor>
+   ```cpp
+   #define EIGEN_USE_THREADS
+   #define EIGEN_NEON_USE_KGEMM 1
+   #include <unsupported/Eigen/CXX11/Tensor>
 
-Eigen::Tensor<float, 2, Eigen::RowMajor> lhs(m, k);
-Eigen::Tensor<float, 2, Eigen::RowMajor> rhs(k, n);
-Eigen::Tensor<float, 2, Eigen::RowMajor> out(m, n);
-Eigen::array<Eigen::IndexPair<int>, 1> dims = {Eigen::IndexPair<int>(1, 0)};
-out = lhs.contract(rhs, dims);
-```
+   Eigen::Tensor<float, 2, Eigen::RowMajor> lhs(m, k);
+   Eigen::Tensor<float, 2, Eigen::RowMajor> rhs(k, n);
+   Eigen::Tensor<float, 2, Eigen::RowMajor> out(m, n);
+   Eigen::array<Eigen::IndexPair<int>, 1> dims = {Eigen::IndexPair<int>(1, 0)};
+   out = lhs.contract(rhs, dims);
+   ```
 
 - Use `Eigen::ThreadPoolDevice` in multi-threaded scenarios.
 
-```cpp
-Eigen::ThreadPool pool(thread_count);
-Eigen::ThreadPoolDevice device(&pool, thread_count);
-out.device(device) = lhs.contract(rhs, dims);
-```
+   ```cpp
+   Eigen::ThreadPool pool(thread_count);
+   Eigen::ThreadPoolDevice device(&pool, thread_count);
+   out.device(device) = lhs.contract(rhs, dims);
+   ```
 
 ## Usage Example (Performance Comparison)
 
