@@ -49,20 +49,6 @@ g++ -O3 -DNDEBUG -march=armv8-a -DEIGEN_NEON_USE_KGEMM=1 \
 
 KGemm不满足调度条件时会自动回退到Eigen开源kernel，无需应用侧分支处理。
 
-### 补丁完整性校验
-
-请从可信的同一发布版本获取补丁及`SHA256SUMS`。从发布仓库根目录执行对应版本的命令。
-
-```bash
-(cd 5.0.0 && sha256sum -c SHA256SUMS) || exit 1
-
-(cd 3.4.0 && sha256sum -c SHA256SUMS) || exit 1
-```
-
-仅在输出补丁文件名及`OK`且命令退出码为0后继续应用。若出现`FAILED`、文件缺失或非零退出码，
-停止应用，重新从可信来源获取补丁与校验文件并再次验证。`git apply --check`只检查补丁适用性，
-不能替代SHA-256完整性检查；同源SHA-256清单本身也不等同于发布者的数字签名。
-
 ## 使用示例（包含头文件使能方法示例）
 
 - 应用侧继续使用标准Tensor contraction接口。
