@@ -135,6 +135,24 @@ struct TensorContractionBlockMemAllocator {
   }
 };
 
+}  // namespace internal
+}  // namespace Eigen
+
+#if defined(EIGEN_NEON_USE_KGEMM) && EIGEN_NEON_USE_KGEMM
+#include "./TensorContractionKGemm.h"
+#endif
+
+namespace Eigen {
+namespace internal {
+
+// External contraction kernels (e.g. TensorFlow's custom kernels) implement
+// HasBeta but need not declare IsKGemm. Keep that extension API compatible.
+template <typename Kernel, typename Enable = void>
+struct TensorContractionKernelIsKGemm : std::false_type {};
+
+template <typename Kernel>
+struct TensorContractionKernelIsKGemm<Kernel, std::enable_if_t<Kernel::IsKGemm>> : std::true_type {};
+
 // WARNING: In this code we assume that Lhs and Rhs tensor expressions are in
 // ColMajor storage order. This property is guaranteed by the
 // TensorContractionOp evaluator. TensorContractionKernel specifies how we pack
@@ -164,11 +182,11 @@ struct TensorContractionBlockMemAllocator {
 //   type of tensor expression (e.g. TensorImagePatchOp has optimized input
 //   mapper).
 template <typename ResScalar, typename LhsScalar, typename RhsScalar, typename StorageIndex, typename OutputMapper,
-          typename LhsMapper, typename RhsMapper>
+          typename LhsMapper, typename RhsMapper, typename EnableKgemm = void>
 struct TensorContractionKernel {
   // True if `invoke()` supports `beta` in `C <- alpha * A * B + beta * C`
   // (otherwise beta should be always equal to 1).
-  enum { HasBeta = false };
+  enum { HasBeta = false, IsKGemm = false };
 
   EIGEN_DEVICE_FUNC TensorContractionKernel(StorageIndex m_, StorageIndex k_, StorageIndex n_, StorageIndex bm_,
                                             StorageIndex bk_, StorageIndex bn_)
@@ -678,6 +696,13 @@ struct TensorContractionEvaluatorBase {
 
   template <bool lhs_inner_dim_contiguous, bool rhs_inner_dim_contiguous, bool rhs_inner_dim_reordered, int Alignment>
   void evalProductSequential(Scalar* buffer) const {
+    // Empty products must not enter a kernel with zero block sizes. In
+    // particular, a beta-capable kernel does not pre-zero its output.
+    if (this->m_i_size == 0 || this->m_j_size == 0) return;
+    if (this->m_k_size == 0) {
+      this->m_device.fill(buffer, buffer + this->m_i_size * this->m_j_size, Scalar(0));
+      return;
+    }
     if (this->m_j_size == 1) {
       this->template evalGemv<lhs_inner_dim_contiguous, rhs_inner_dim_contiguous, rhs_inner_dim_reordered, Alignment>(
           buffer);
@@ -800,9 +825,10 @@ struct TensorContractionEvaluatorBase {
     // Sizes of the blocks to load in cache. See the Goto paper for details.
     internal::TensorContractionBlocking<Scalar, LhsScalar, RhsScalar, Index, internal::ShardByCol> blocking(
         k_slice, m, n, num_threads);
-    const Index kc = blocking.kc();
-    const Index mc = numext::mini(m, blocking.mc());
-    const Index nc = numext::mini(n, blocking.nc());
+    const bool is_kgemm = internal::TensorContractionKernelIsKGemm<TensorContractionKernel>::value;
+    const Index kc = is_kgemm ? k_slice : blocking.kc();
+    const Index mc = is_kgemm ? m : numext::mini(m, blocking.mc());
+    const Index nc = is_kgemm ? n : numext::mini(n, blocking.nc());
 
     typedef typename TensorContractionKernel::LhsBlock LhsBlock;
     typedef typename TensorContractionKernel::RhsBlock RhsBlock;
@@ -810,7 +836,7 @@ struct TensorContractionEvaluatorBase {
     LhsBlock blockA;
     RhsBlock blockB;
 
-    TensorContractionKernel kernel(m, k_slice, n, mc, kc, nc);
+    TensorContractionKernel kernel(m, is_kgemm ? this->m_k_size : k_slice, n, mc, kc, nc);
 
     typedef typename TensorContractionKernel::BlockMemHandle BlockMemHandle;
     const BlockMemHandle packed_mem = kernel.allocate(this->m_device, &blockA, &blockB);
