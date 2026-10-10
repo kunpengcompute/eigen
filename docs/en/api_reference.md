@@ -123,6 +123,6 @@ static inline void kgemm_neon_fp32_nn_packed(
 
 ## Change History
 
-| Date | Description |
-| --- | --- |
-| 2026-09-30 | This is the first official release. |
+| Version | Date | Description |
+| ---- | ---- | -- |
+| 01 | 2026-09-30 | This is the first official release. |

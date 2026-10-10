@@ -125,6 +125,6 @@ For installation, macro definitions, and fallback conditions, see [Installation 
 
 ## Change History
 
-| Date | Description |
-| --- | --- |
-| 2026-09-30 | This is the first official release. |
+| Version | Date | Description |
+| ---- | ---- | -- |
+| 01 | 2026-09-30 | This is the first official release. |

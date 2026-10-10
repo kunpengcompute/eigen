@@ -58,11 +58,11 @@ cmake --install build
 
 | Option | Description | Default Value |
 | --- | --- | --- |
-| `EIGEN_NEON_USE_KGEMM` | Enables the KGemm path in AArch64 NEON TensorContraction | Undefined (Off) |
-| `EIGEN_USE_THREADS` | Enables the Eigen ThreadPool device | Undefined (Off) |
-| `EIGEN_NEON_KGEMM_REUSE_PACKING` | Enables right-hand side matrix packing reuse in multithreading | `1` |
-| `EIGEN_NEON_KGEMM_PACK_REUSE_MIN_MN` | Minimum M/N value for packing reuse | `768` |
-| `EIGEN_NEON_KGEMM_PACK_REUSE_MIN_K` | Minimum K value for packing reuse | `512` |
+| EIGEN_NEON_USE_KGEMM | Enables the KGemm path in AArch64 NEON TensorContraction | Undefined (Off) |
+| EIGEN_USE_THREADS | Enables the Eigen ThreadPool device | Undefined (Off) |
+| EIGEN_NEON_KGEMM_REUSE_PACKING | Enables right-hand side matrix packing reuse in multithreading | 1 |
+| EIGEN_NEON_KGEMM_PACK_REUSE_MIN_MN | Minimum M/N value for packing reuse | 768 |
+| EIGEN_NEON_KGEMM_PACK_REUSE_MIN_K | Minimum K value for packing reuse | 512 |
 
 Recommended compilation parameters:
 
@@ -99,6 +99,6 @@ g++ -O3 -DNDEBUG -march=armv8-a -DEIGEN_USE_THREADS \
 
 ## Change History
 
-| Date | Description |
-| --- | --- |
-| 2026-09-30 | This is the first official release. |
+| Version | Date | Description |
+| ---- | ---- | -- |
+| 01 | 2026-09-30 | This is the first official release. |
