@@ -2241,14 +2241,6 @@ static inline void micro_kernel_4x4_nn(float *a, float *b, float *c, long int ld
 #include <new>
 #endif
 
-#ifndef thread_local
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-#define thread_local _Thread_local
-#else
-#define thread_local __thread
-#endif
-#endif
-
 static inline long int align_up(long int n, long int a)
 {
     return (n + a - 1) & ~(a - 1);
