@@ -47,17 +47,17 @@
 
 ### V1.0.0
 
-1. 将`kgemm_neon_fp32_nn`接入TensorContraction调度层，并保留Eigen开源kernel回退路径。
-2. 新增`TensorContractionKGemm.h`，隔离KGemm适配、阈值和多线程逻辑。
-3. 支持ThreadPool并行执行及右矩阵packing复用，减少重复packing。
-4. 分别提供Eigen 3.4.0和5.0.0的单文件补丁及SHA-256校验值。
+- 将`kgemm_neon_fp32_nn`接入TensorContraction调度层，并保留Eigen开源kernel回退路径。
+- 新增`TensorContractionKGemm.h`，隔离KGemm适配、阈值和多线程逻辑。
+- 支持ThreadPool并行执行及右矩阵packing复用，减少重复packing。
+- 分别提供Eigen 3.4.0和5.0.0的单文件补丁及SHA-256校验值。
 
 ## 已知限制
 
-1. KGemm仅在AArch64 NEON FP32和支持的NN数据布局上启用。
-2. 小尺寸或不满足阈值的contraction自动使用Eigen开源实现。
-3. 补丁目录中仅声明已验证的Eigen版本；其他版本应先运行`git apply --check`并完成正确性测试。
-4. 实际收益与矩阵形状、线程数、CPU频率、绑核和内存带宽有关。
+- KGemm仅在AArch64 NEON FP32和支持的NN数据布局上启用。
+- 小尺寸或不满足阈值的contraction自动使用Eigen开源实现。
+- 补丁目录中仅声明已验证的Eigen版本；其他版本应先运行`git apply --check`并完成正确性测试。
+- 实际收益与矩阵形状、线程数、CPU频率、绑核和内存带宽有关。
 
 ## 版本配套文档
 

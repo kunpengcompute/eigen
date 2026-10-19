@@ -47,23 +47,23 @@
 
 ### V1.0.0
 
-1. Integrated `kgemm_neon_fp32_nn` into the TensorContraction dispatch layer while retaining the Eigen open-source kernel fallback path.
+- Integrated `kgemm_neon_fp32_nn` into the TensorContraction dispatch layer while retaining the Eigen open-source kernel fallback path.
 
-2. Added `TensorContractionKGemm.h` to isolate KGemm adaptation, threshold, and multithreading logic.
+- Added `TensorContractionKGemm.h` to isolate KGemm adaptation, threshold, and multithreading logic.
 
-3. Supports ThreadPool parallel execution and right-hand side matrix packing reuse to reduce redundant packing.
+- Supports ThreadPool parallel execution and right-hand side matrix packing reuse to reduce redundant packing.
 
-4. Provided single-file patches and SHA-256 checksums for Eigen 3.4.0 and 5.0.0.
+- Provided single-file patches and SHA-256 checksums for Eigen 3.4.0 and 5.0.0.
 
 ## Known Limitations
 
-1. KGemm is enabled only on AArch64 NEON FP32 and the supported NN data layout.
+- KGemm is enabled only on AArch64 NEON FP32 and the supported NN data layout.
 
-2. Contractions of small sizes or those that do not meet the threshold automatically fall back to the open-source Eigen implementation.
+- Contractions of small sizes or those that do not meet the threshold automatically fall back to the open-source Eigen implementation.
 
-3. The patch directory only lists Eigen versions that have been verified. For other versions, run `git apply --check` first and complete correctness testing before applying.
+- The patch directory only lists Eigen versions that have been verified. For other versions, run `git apply --check` first and complete correctness testing before applying.
 
-4. Actual gains depend on matrix shape, thread count, CPU frequency, CPU pinning, and memory bandwidth.
+- Actual gains depend on matrix shape, thread count, CPU frequency, CPU pinning, and memory bandwidth.
 
 ## Documentation
 
