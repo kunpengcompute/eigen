@@ -102,7 +102,7 @@ CPU：Kunpeng 950；操作系统：openEuler 24.03 LTS-SP3。
 
 ## 常见问题
 
-安装、宏定义和回退条件请参见[安装指南](installation_guide.md)及[接口参考](api_reference.md)。
+安装、宏定义和回退条件请参见《[安装指南](installation_guide.md)》及《[API参考](api_reference.md)》。
 
 ## 修订记录
 
