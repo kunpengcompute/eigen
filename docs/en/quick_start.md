@@ -109,9 +109,5 @@ For installation, macro definitions, and fallback conditions, see [Installation 
 ## Change History
 
 | Version | Date | Description |
-<<<<<<< HEAD
-| ---- | ---- | -- |
-=======
 | --- | --- | --- |
->>>>>>> a14eadcf5... 修改现网检视问题&AI亲和&930更新翻译合入
 | 01 | 2026-09-30 | This is the first official release. |
