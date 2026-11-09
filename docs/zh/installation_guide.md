@@ -26,7 +26,7 @@ git -C eigen-source apply --check ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
 git -C eigen-source apply ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
 ```
 
-Eigen3.4.0请将上述路径替换为`3.4.0/eigen-3.4.0-kgemm.patch`。
+Eigen 3.4.0请将上述路径替换为`3.4.0/eigen-3.4.0-kgemm.patch`。
 
 ### 安装步骤
 
@@ -70,17 +70,29 @@ g++ -O3 -DNDEBUG -march=armv8-a -DEIGEN_USE_THREADS \
 
 ## 常见问题
 
-**问题**：补丁无法应用怎么办？
+### 补丁无法应用怎么办？
 
-**答复**：先确认当前源码对应补丁标注的Eigen版本，并使用`git apply --check`查看冲突位置。Eigen 5.0.0补丁已验证可直接应用于官方5.0.1标签。
+**问题**
+补丁无法应用怎么办？
 
-**问题**：定义宏后为什么没有进入KGemm？
+**回答**
+先确认当前源码对应补丁标注的Eigen版本，并使用`git apply --check`查看冲突位置。Eigen 5.0.0补丁已验证可直接应用于官方5.0.1标签。
 
-**答复**：KGemm仅适用于AArch64 NEON、FP32、非转置布局对应的TensorContraction，并受最小维度阈值约束。其他组合自动回退到Eigen开源路径。
+### 定义宏后为什么没有进入KGemm？
 
-**问题**：如何启用多线程？
+**问题**
+定义宏后为什么没有进入KGemm？
 
-**答复**：同时定义`EIGEN_USE_THREADS`，使用`Eigen::ThreadPoolDevice`执行contraction，并在链接时加入`-pthread`。
+**回答**
+KGemm仅适用于AArch64 NEON、FP32、非转置布局对应的TensorContraction，并受最小维度阈值约束。其他组合自动回退到Eigen开源路径。
+
+### 如何启用多线程？
+
+**问题**
+如何启用多线程？
+
+**回答**
+同时定义`EIGEN_USE_THREADS`，使用`Eigen::ThreadPoolDevice`执行contraction，并在链接时加入`-pthread`。
 
 ## 修订记录
 

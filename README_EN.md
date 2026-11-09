@@ -1,6 +1,8 @@
 # Eigen TensorContraction KGemm
 
-English|[简体中文](./README.md)
+<!-- md-trans-meta sourceCommit=d1c8516166e05249bddb3f196ba803e043e8d82c translatedAt=2026-10-16T10:34:03.939Z pushedAt=2026-10-23T07:05:16.912Z -->
+
+[简体中文](./README.md)|English
 
 ## Latest News
 
@@ -10,7 +12,7 @@ English|[简体中文](./README.md)
 
 [Eigen](https://gitlab.com/libeigen/eigen) is a C++ template library for linear algebra, matrix, and vector operations, providing rich functionality including the Tensor module.
 
-This project optimizes the FP32 matrix multiplication performance of Eigen TensorContraction on the AArch64 architecture by integrating NEON KGemm into Eigen as a `TensorContractionKernel` specialization, supporting both `DefaultDevice` and `ThreadPoolDevice`. Expressions that do not meet the KGemm selection criteria will fall back to the open-source  Eigen implementation.
+This project optimizes the FP32 matrix multiplication performance of Eigen TensorContraction on the AArch64 architecture by integrating NEON KGemm into Eigen as a `TensorContractionKernel` specialization, supporting both `DefaultDevice` and `ThreadPoolDevice`. Expressions that do not meet the KGemm selection criteria will fall back to the open-source Eigen implementation.
 
 ## Directory Structure
 

@@ -1,10 +1,12 @@
 # Eigen TensorContraction KGemm介绍
 
+本文档介绍Eigen TensorContraction在ARM64架构上的KGemm优化补丁，涵盖补丁获取、应用、编译验证及使能KGemm的步骤，适用于需提升ARM64上FP32矩阵乘性能的开发者。
+
 简体中文|[English](./README_EN.md)
 
 ## 最新消息
 
-- [2026.09.30]：第一次正式发布，新增基于Eigen 3.4.0和5.0.0的ARM64 KGemm TensorContraction优化补丁。
+- [2026-09-30]：第一次正式发布，新增基于Eigen 3.4.0和5.0.0的ARM64 KGemm TensorContraction优化补丁。
 
 ## 项目介绍
 
@@ -65,6 +67,7 @@ eigen/
 ## License
 
 本项目遵循与Eigen主要代码相同的许可证（MPL-2.0），具体请参见[LICENSE](LICENSE)文件。补丁中个别上游文件仍可能适用Eigen发布包所列的兼容许可证。
+本项目的文档适用CC-BY 4.0许可证，具体请参见[LICENSE](LICENSE)文件。
 
 ## 贡献指南
 

@@ -1,5 +1,7 @@
 # Installation Guide
 
+<!-- md-trans-meta sourceCommit=305ad8a068f8e45c210f8b00c49cc552d20fed82 translatedAt=2026-10-16T10:34:03.422Z pushedAt=2026-10-23T07:25:43.667Z -->
+
 This document describes how to apply the TensorContraction KGemm optimization patches to Eigen 3.4.0, 5.0.0, and compatible versions.
 
 ## Environment Requirements
@@ -20,29 +22,13 @@ This document describes how to apply the TensorContraction KGemm optimization pa
 ```bash
 git clone -b main https://gitcode.com/boostkit/eigen eigen
 git clone https://gitlab.com/libeigen/eigen eigen-source
-git -C eigen-source checkout 5.0.0         
+git -C eigen-source checkout 5.0.0          
 (cd eigen/5.0.0 && sha256sum -c SHA256SUMS) || exit 1
 git -C eigen-source apply --check ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
 git -C eigen-source apply ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
 ```
 
 For Eigen 3.4.0, replace the above path with `3.4.0/eigen-3.4.0-kgemm.patch`.
-
-### Verifying Patch Integrity
-
-Obtain the patch and `SHA256SUMS` from the same trusted release. From the release repository root,
-run the command for your version:
-
-```bash
-(cd 5.0.0 && sha256sum -c SHA256SUMS) || exit 1
-# For 3.4.0:
-(cd 3.4.0 && sha256sum -c SHA256SUMS) || exit 1
-```
-
-Continue only when the patch is reported as `OK` and the command exits with code 0.
-On `FAILED`, a missing file, or any nonzero exit status, stop and obtain both files again from the
-trusted release, then recheck. `git apply --check` checks applicability, not integrity.
-A checksum list obtained alongside the patch is not a publisher's digital signature.
 
 ### Installation Steps
 
