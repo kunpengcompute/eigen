@@ -6,7 +6,7 @@
 
 | 环境 | 要求 |
 | --- | --- |
-| 操作系统 | Linux AArch64，推荐openEuler 24.03 LTS |
+| 操作系统 | Linux AArch64 |
 | 处理器 | 支持ARMv8-A NEON的AArch64处理器 |
 | 编译器 | GCC 12或Clang 17，支持C++11；其他支持AArch64 NEON的版本也可使用 |
 | 构建工具 | Git、CMake以及支持C++11的构建环境 |
