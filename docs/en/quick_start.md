@@ -1,14 +1,14 @@
 # Quick Start
 
+<!-- md-trans-meta sourceCommit=1da8a7b972c205a5fed78be3f7f99a013fefddb8 translatedAt=2026-10-16T10:34:06.997Z pushedAt=2026-10-23T07:27:10.633Z -->
+
 This document describes how to quickly enable and verify the Eigen TensorContraction KGemm optimization.
 
 ## Environment Requirements
 
 - An AArch64 Linux system with an Armv8-A NEON processor.
-
 - GCC or Clang with C++11 support.
-
-- Eigen 3.4.0, 5.0.0, or the confirmed compatible 5.0.1.
+- Eigen 3.4.0, 5.0.0, or the confirmed compatible 5.0.1 version.
 
 ## Enabling AArch64 Optimization
 
@@ -42,8 +42,7 @@ The steps to obtain and apply the patch are as follows.
    git -C eigen-source apply ../eigen/5.0.0/eigen-5.0.0-kgemm.patch
    ```
 
-For Eigen 3.4.0, use `3.4.0/eigen-3.4.0-kgemm.patch`. Define
-`EIGEN_NEON_USE_KGEMM=1` when compiling service code.
+For Eigen 3.4.0, use `3.4.0/eigen-3.4.0-kgemm.patch`. Define `EIGEN_NEON_USE_KGEMM=1` when compiling service code.
 
 ```bash
 g++ -O3 -DNDEBUG -march=armv8-a -DEIGEN_NEON_USE_KGEMM=1 \
@@ -51,22 +50,6 @@ g++ -O3 -DNDEBUG -march=armv8-a -DEIGEN_NEON_USE_KGEMM=1 \
 ```
 
 When KGemm does not meet the dispatch conditions, it automatically falls back to the Eigen open-source kernel, requiring no branch handling on the app side.
-
-### Verifying Patch Integrity
-
-Obtain the patch and `SHA256SUMS` from the same trusted release. From the release repository root,
-run the command for your version:
-
-```bash
-(cd 5.0.0 && sha256sum -c SHA256SUMS) || exit 1
-# For 3.4.0:
-(cd 3.4.0 && sha256sum -c SHA256SUMS) || exit 1
-```
-
-Continue only when the patch is reported as `OK` and the command exits with code 0.
-On `FAILED`, a missing file, or any nonzero exit status, stop and obtain both files again from the
-trusted release, then recheck. `git apply --check` checks applicability, not integrity.
-A checksum list obtained alongside the patch is not a publisher's digital signature.
 
 ## Usage Examples (Including Header File Enablement)
 
@@ -98,9 +81,9 @@ Run the NEON and KGemm builds with the same input, thread count, number of repet
 
 ### Measured Performance Reference
 
-CPU: Kunpeng 950; OS: openEuler 24.03 LTS-SP3.
+CPU: Kunpeng 950; OS: openEuler 24.03 LTS SP3
 
-| Version | Threads | M×K×N | NEON ms | KGEMM ms | Speedup |
+| Version | Threads | M×K×N | NEON (ms) | KGEMM (ms) | Speedup |
 | --- | ---: | --- | ---: | ---: | ---: |
 | 3.4.0 | 1 | 128×128×128 | 0.0846 | 0.0733 | 1.154× |
 | 3.4.0 | 1 | 512×512×512 | 5.2108 | 4.5442 | 1.147× |
@@ -125,6 +108,6 @@ For installation, macro definitions, and fallback conditions, see [Installation 
 
 ## Change History
 
-| Date | Description |
-| --- | --- |
-| 2026-09-30 | This is the first official release. |
+| Version | Date | Description |
+| --- | --- | --- |
+| 01 | 2026-09-30 | This is the first official release. |
