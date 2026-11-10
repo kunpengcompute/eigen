@@ -1,8 +1,10 @@
 # API Reference
 
+<!-- md-trans-meta sourceCommit=d1c8516166e05249bddb3f196ba803e043e8d82c translatedAt=2026-10-16T10:34:03.999Z pushedAt=2026-10-23T07:12:32.358Z -->
+
 ## Interface Description
 
-The KGemm optimization integrates with Eigen's public TensorContraction expression through compile-time macros, without introducing any new public Eigen API that users must call. The main configuration and internal interfaces are shown in [**Table 1** KGemm Interface List](#kgemm-interface-list).
+The KGemm optimization integrates with Eigen's public TensorContraction expression through compile-time macros, without introducing any new public Eigen API that users must call. The main configuration and internal interfaces are shown in [Table 1 KGemm Interface List](#kgemm-interface-list).
 
 **Table 1** KGemm interface list<a id="kgemm-interface-list"></a>
 
@@ -123,6 +125,6 @@ static inline void kgemm_neon_fp32_nn_packed(
 
 ## Change History
 
-| Date | Description |
-| --- | --- |
-| 2026-09-30 | This is the first official release. |
+| Version | Date | Description |
+| ---- | ---- | -- |
+| 01 | 2026-09-30 | This is the first official release. |

@@ -8,7 +8,7 @@ KGemm优化通过编译宏接入Eigen公开的TensorContraction表达式，不�
 
 |接口名称|接口说明|
 |--|--|
-|EIGEN_NEON_USE_KGEMM|启用ARM64 NEON KGemm TensorContraction特化。|
+|EIGEN_NEON_USE_KGEMM|启用AArch64 NEON KGemm TensorContraction特化。|
 |EIGEN_NEON_KGEMM_REUSE_PACKING|控制大尺寸TensorContraction是否复用调度器packing，默认值为1。|
 |EIGEN_NEON_KGEMM_PACK_REUSE_MIN_MN|packing复用的有效M/N最小值，默认值为768。|
 |EIGEN_NEON_KGEMM_PACK_REUSE_MIN_K|packing复用的K最小值，默认值为512。|
@@ -76,10 +76,10 @@ output.device(device) = lhs.contract(rhs, dims);
 |条件|要求|
 |--|--|
 |架构|AArch64且编译器启用NEON|
-|标量类型|输入和输出均为`float`|
+|标量类型|输入和输出均为float|
 |表达式|二维、一个收缩维度、规范连续存储|
 |mapper|左右输入支持RawAccess，内维连续，RHS未重排|
-|设备|`DefaultDevice`或`ThreadPoolDevice`|
+|设备|DefaultDevice或ThreadPoolDevice|
 
 条件不满足时自动回退到Eigen开源packing和GEBP。
 
