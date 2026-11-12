@@ -112,6 +112,21 @@ static inline void kgemm_neon_fp32_nn(
 
 This interface accepts contiguous RowMajor NN matrix views. `addc=0` indicates overwriting the output, while a non-zero value indicates accumulation. It is an internal Eigen interface and provides no ABI stability guarantees.
 
+**Parameter Description**
+
+|Parameter|Type|Value Range|Unit|Description|
+|--|--|--|--|--|
+|a|float*|Non-null pointer|—|Data pointer of input matrix A, stored contiguously in row-major order with dimensions m×k.|
+|b|float*|Non-null pointer|—|Data pointer of input matrix B, stored contiguously in row-major order with dimensions k×n.|
+|c|float*|Non-null pointer|—|Data pointer of output matrix C, stored contiguously in row-major order with dimensions m×n.|
+|lda|long int|Not less than k|Elements|Row stride of matrix A, that is, the number of elements between the first elements of adjacent rows; A is contiguous when lda equals k.|
+|ldb|long int|Not less than n|Elements|Row stride of matrix B, that is, the number of elements between the first elements of adjacent rows; B is contiguous when ldb equals n.|
+|ldc|long int|Not less than n|Elements|Row stride of matrix C, that is, the number of elements between the first elements of adjacent rows; C is contiguous when ldc equals n.|
+|m|long int|Positive integer|Elements|Number of rows of matrix A and of matrix C.|
+|n|long int|Positive integer|Elements|Number of columns of matrix B and of matrix C.|
+|k|long int|Positive integer|Elements|Contraction dimension length, that is, the number of columns of matrix A and the number of rows of matrix B.|
+|addc|long int|0 or a non-zero integer|—|Whether to accumulate: 0 overwrites the output, and a non-zero value accumulates onto the existing output values.|
+
 ### kgemm_neon_fp32_nn_packed
 
 ```cpp
@@ -122,6 +137,19 @@ static inline void kgemm_neon_fp32_nn_packed(
 ```
 
 `pa` uses a 4-row K-major panel layout, and `pb` uses a 16-column K-major panel layout. This interface is invoked by the TensorContraction scheduler and is not recommended for direct invocation by service code.
+
+**Parameter Description**
+
+|Parameter|Type|Value Range|Unit|Description|
+|--|--|--|--|--|
+|pa|float*|Non-null pointer|—|Data pointer of the packed matrix A, stored as consecutive 4-row K-major panels; the tail panel is zero-padded when fewer than 4 rows remain.|
+|pb|float*|Non-null pointer|—|Data pointer of the packed matrix B, stored as consecutive 16-column K-major panels; the tail panel is zero-padded when fewer than 16 columns remain.|
+|c|float*|Non-null pointer|—|Data pointer of output matrix C, stored contiguously in row-major order with dimensions m×n.|
+|ldc|long int|Not less than n|Elements|Row stride of matrix C, that is, the number of elements between the first elements of adjacent rows.|
+|m|long int|Positive integer|Elements|Number of rows of matrix A and of matrix C.|
+|n|long int|Positive integer|Elements|Number of columns of matrix B and of matrix C.|
+|k|long int|Positive integer|Elements|Contraction dimension length, that is, the number of columns of matrix A and the number of rows of matrix B.|
+|addc|long int|0 or a non-zero integer|—|Whether to accumulate: 0 overwrites the output, and a non-zero value accumulates onto the existing output values.|
 
 ## Change History
 
